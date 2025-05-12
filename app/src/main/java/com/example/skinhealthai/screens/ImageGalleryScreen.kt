@@ -9,6 +9,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,9 +21,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.skinhealthai.ui.theme.BluePrimary
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavHostController
 
 @Composable
-fun ImageGalleryScreen(navController: NavController, images: List<Bitmap>) {
+fun ImageGalleryScreen(navController: NavHostController, images: List<Bitmap>) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,7 +56,7 @@ fun ImageGalleryScreen(navController: NavController, images: List<Bitmap>) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(images) { image ->  // Corrigido para usar a lista de imagens diretamente
+                items(images) { image ->
                     ImageItem(image = image, onClick = {
                         navController.navigate("scan_image/${images.indexOf(image)}") // Corrigido para passar o índice correto
                     })
@@ -68,14 +73,14 @@ fun ImageItem(image: Bitmap, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
-            .clickable { onClick() } // Ação de clique na imagem
+            .clickable { onClick() }
             .padding(8.dp)
-            .clip(RoundedCornerShape(12.dp)) // Bordas arredondadas
+            .clip(RoundedCornerShape(12.dp))
     ) {
         Image(
             bitmap = image.asImageBitmap(),
             contentDescription = "Imagem capturada",
-            modifier = Modifier.fillMaxSize() // Preenche toda a área da Box
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

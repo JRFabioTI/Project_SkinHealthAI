@@ -73,8 +73,11 @@ fun LoginScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         HomeButton("Entrar") {
-            navController.navigate("home")
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
+            }
         }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -82,7 +85,11 @@ fun LoginScreen(navController: NavController) {
             text = "Não tem uma conta? Cadastre-se",
             fontSize = 14.sp,
             color = BlueSecondary,
-            modifier = Modifier.clickable { navController.navigate("signup") },
+            modifier = Modifier.clickable {
+                navController.navigate("signup") {
+                    launchSingleTop = true
+                }
+            },
             textAlign = TextAlign.Center
         )
     }

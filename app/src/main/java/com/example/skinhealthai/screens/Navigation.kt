@@ -1,19 +1,28 @@
 package com.example.skinhealthai.screens
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.skinhealthai.viewmodel.ImageViewModel
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "home") {
-        composable("login") { LoginScreen(navController) }
-        composable("signup") { SignUpScreen(navController) }
-        composable("home") { HomeScreen(navController) }
-        composable("image_gallery") {
+    // Criando o ViewModel dentro do NavHost
+    val imageViewModel: ImageViewModel = viewModel()
 
-            ImageGalleryScreen(navController = navController, images = listOf())
+    NavHost(navController = navController, startDestination = "signup") { // Agora começa na tela de cadastro
+        composable("signup") { SignUpScreen(navController) }
+        composable("login") { LoginScreen(navController) }
+        composable("home") {
+            HomeScreen(
+                navController = navController,
+                imageViewModel = imageViewModel
+            )
+        }
+        composable("image_gallery") {
+            ImageGalleryScreen(navController = navController, images = imageViewModel.images.value)
         }
     }
 }

@@ -12,20 +12,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.skinhealthai.ui.theme.BluePrimary
 import com.example.skinhealthai.ui.theme.BlueSecondary
 import com.example.skinhealthai.ui.theme.LightGray
 import com.example.skinhealthai.ui.theme.White
+import com.example.skinhealthai.utils.saveBitmapToGallery
+import com.example.skinhealthai.viewmodel.ImageViewModel
 
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(
+    navController: NavHostController,
+    imageViewModel: ImageViewModel = viewModel()
+) {
     var showCamera by remember { mutableStateOf(false) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -50,26 +58,27 @@ fun HomeScreen(navController: NavHostController) {
             text = "Aplicativo de apoio à análise de saúde da pele",
             fontSize = 14.sp,
             color = Color.DarkGray,
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Botões de ação
+        // Botões
         HomeButton(text = "📸 Captura de imagem da pele") {
             showCamera = true
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        HomeButton(text = "🤖 Processamento automático com IA") {
+        HomeButton(text = "🤖 Processamento com IA") {
             navController.navigate("image_gallery")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         HomeButton(text = "⚠️ Classificação de risco") {
-            // Futuro
+            // Em construção
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -80,7 +89,8 @@ fun HomeScreen(navController: NavHostController) {
                 text = "Imagem capturada:",
                 color = BluePrimary,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(12.dp))
             Image(
@@ -93,12 +103,17 @@ fun HomeScreen(navController: NavHostController) {
         }
     }
 
-    // Captura da câmera
+    // Câmera
     if (showCamera) {
         CameraCapture(
             onImageCaptured = { bitmap ->
                 capturedBitmap = bitmap
                 showCamera = false
+
+                bitmap?.let {
+                    saveBitmapToGallery(context, it)
+                    imageViewModel.addImage(it) // Agora adicionamos aqui, apenas 1 vez
+                }
             }
         )
     }
@@ -108,16 +123,18 @@ fun HomeScreen(navController: NavHostController) {
 fun HomeButton(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = BlueSecondary),
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(50.dp)
+            .clip(RoundedCornerShape(12.dp)),
+        colors = ButtonDefaults.buttonColors(containerColor = BlueSecondary)
     ) {
         Text(
             text = text,
             color = White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
     }
 }

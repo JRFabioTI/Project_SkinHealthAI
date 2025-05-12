@@ -92,8 +92,11 @@ fun SignUpScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         HomeButton("Cadastrar") {
-            navController.navigate("login")
+            navController.navigate("login") {
+                popUpTo("signup") { inclusive = true }
+            }
         }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
