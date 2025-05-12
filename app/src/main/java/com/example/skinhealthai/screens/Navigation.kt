@@ -7,9 +7,13 @@ import androidx.navigation.compose.composable
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "login") {
+    NavHost(navController = navController, startDestination = "home") {
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignUpScreen(navController) }
-        composable("home") { HomeScreen() }
+        composable("home") { HomeScreen(navController) }
+        composable("image_gallery") {
+
+            ImageGalleryScreen(navController = navController, images = listOf())
+        }
     }
 }

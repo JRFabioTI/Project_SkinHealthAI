@@ -3,7 +3,6 @@ package com.example.skinhealthai.screens
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -11,39 +10,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.text.style.TextAlign
+import androidx.navigation.NavHostController
 import com.example.skinhealthai.ui.theme.BluePrimary
 import com.example.skinhealthai.ui.theme.BlueSecondary
 import com.example.skinhealthai.ui.theme.LightGray
 import com.example.skinhealthai.ui.theme.White
 
 @Composable
-fun HomeButton(text: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(BlueSecondary)
-            .clickable { onClick() }
-            .padding(vertical = 18.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavHostController) {
     var showCamera by remember { mutableStateOf(false) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -76,19 +56,19 @@ fun HomeScreen() {
         Spacer(modifier = Modifier.height(28.dp))
 
         // Botões de ação
-        HomeButton("📸 Captura de imagem da pele") {
+        HomeButton(text = "📸 Captura de imagem da pele") {
             showCamera = true
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        HomeButton("🤖 Processamento automático com IA") {
-            // Futuro
+        HomeButton(text = "🤖 Processamento automático com IA") {
+            navController.navigate("image_gallery")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        HomeButton("⚠️ Classificação de risco") {
+        HomeButton(text = "⚠️ Classificação de risco") {
             // Futuro
         }
 
@@ -120,6 +100,24 @@ fun HomeScreen() {
                 capturedBitmap = bitmap
                 showCamera = false
             }
+        )
+    }
+}
+
+@Composable
+fun HomeButton(text: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = BlueSecondary),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        Text(
+            text = text,
+            color = White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
