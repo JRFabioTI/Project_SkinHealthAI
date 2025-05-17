@@ -1,4 +1,4 @@
-package com.example.skinhealthai.screens
+package com.example.skinhealthai.ui.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -17,19 +17,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.skinhealthai.ui.theme.BluePrimary
-import com.example.skinhealthai.ui.theme.BlueSecondary
-import com.example.skinhealthai.ui.theme.LightGray
-import com.example.skinhealthai.ui.theme.White
-import com.example.skinhealthai.utils.saveBitmapToGallery
-import com.example.skinhealthai.viewmodel.ImageViewModel
+import com.example.skinhealthai.ui.screens.CameraCapture
+import com.example.skinhealthai.ui.theme.*
+import com.example.skinhealthai.utils.FileUtils
+import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    imageViewModel: ImageViewModel = viewModel()
+    imageViewModel: ImageUploadViewModel
 ) {
     var showCamera by remember { mutableStateOf(false) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -42,7 +39,6 @@ fun HomeScreen(
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Cabeçalho
         Text(
             text = "Bem-vindo, Dr. Fábio J.r",
             fontSize = 22.sp,
@@ -64,7 +60,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Botões
         HomeButton(text = "📸 Captura de imagem da pele") {
             showCamera = true
         }
@@ -83,7 +78,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Imagem capturada
         capturedBitmap?.let { bitmap ->
             Text(
                 text = "Imagem capturada:",
@@ -103,7 +97,6 @@ fun HomeScreen(
         }
     }
 
-    // Câmera
     if (showCamera) {
         CameraCapture(
             onImageCaptured = { bitmap ->
@@ -111,8 +104,7 @@ fun HomeScreen(
                 showCamera = false
 
                 bitmap?.let {
-                    saveBitmapToGallery(context, it)
-                    imageViewModel.addImage(it) // Agora adicionamos aqui, apenas 1 vez
+                    FileUtils.saveBitmapToGallery(context, it)
                 }
             }
         )

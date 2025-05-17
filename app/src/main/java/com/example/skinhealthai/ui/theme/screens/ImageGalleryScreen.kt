@@ -1,49 +1,44 @@
-package com.example.skinhealthai.screens
+package com.example.skinhealthai.ui.theme.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.example.skinhealthai.ui.theme.BluePrimary
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import com.example.skinhealthai.ui.theme.BluePrimary
+import com.example.skinhealthai.utils.ImageStorage
 
 @Composable
-fun ImageGalleryScreen(navController: NavHostController, images: List<Bitmap>) {
+fun ImageGalleryScreen(navController: NavHostController) {
+    // Lista de imagens
+    val images = ImageStorage.getAll()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Título da tela com tipografia do Material 3
         Text(
             text = "Galeria de Imagens",
             fontSize = 24.sp,
             color = BluePrimary,
             modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.titleLarge // Ajustado para o Material 3
+            style = MaterialTheme.typography.titleLarge
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         if (images.isEmpty()) {
-            // Exibindo mensagem quando não houver imagens
             Text(
                 text = "Nenhuma imagem disponível",
                 fontSize = 18.sp,
@@ -52,13 +47,10 @@ fun ImageGalleryScreen(navController: NavHostController, images: List<Bitmap>) {
                 style = MaterialTheme.typography.bodyMedium
             )
         } else {
-            // Lista de imagens com LazyColumn
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(images) { image ->
                     ImageItem(image = image, onClick = {
-                        navController.navigate("scan_image/${images.indexOf(image)}") // Corrigido para passar o índice correto
+                        navController.navigate("scan_image/${images.indexOf(image)}")
                     })
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -73,9 +65,8 @@ fun ImageItem(image: Bitmap, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
-            .clickable { onClick() }
-            .padding(8.dp)
             .clip(RoundedCornerShape(12.dp))
+            .padding(8.dp)
     ) {
         Image(
             bitmap = image.asImageBitmap(),

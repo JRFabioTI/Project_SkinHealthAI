@@ -1,4 +1,4 @@
-package com.example.skinhealthai.screens
+package com.example.skinhealthai.ui.screens
 
 import android.Manifest
 import android.graphics.Bitmap
@@ -16,14 +16,12 @@ fun CameraCapture(onImageCaptured: (Bitmap?) -> Unit) {
     var permissionGranted by remember { mutableStateOf(false) }
     var shouldLaunchCamera by remember { mutableStateOf(false) }
 
-    // Lançador da câmera
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         onImageCaptured(bitmap)
     }
 
-    // Lançador da permissão de câmera
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -33,7 +31,6 @@ fun CameraCapture(onImageCaptured: (Bitmap?) -> Unit) {
         }
     }
 
-    // Verifica permissão ao montar o Composable
     LaunchedEffect(Unit) {
         val check = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
         if (check == PERMISSION_GRANTED) {
@@ -44,7 +41,6 @@ fun CameraCapture(onImageCaptured: (Bitmap?) -> Unit) {
         }
     }
 
-    // Lança a câmera se permissão foi concedida
     LaunchedEffect(shouldLaunchCamera) {
         if (shouldLaunchCamera && permissionGranted) {
             cameraLauncher.launch(null)
