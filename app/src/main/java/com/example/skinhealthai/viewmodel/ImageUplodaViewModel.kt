@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class ImageUploadViewModel : ViewModel() {
+    var capturedBitmap: Bitmap? = null
     private val repository = ImageRepository()
     private val _predictionResult = MutableStateFlow<String?>(null)
     val predictionResult: StateFlow<String?> = _predictionResult
