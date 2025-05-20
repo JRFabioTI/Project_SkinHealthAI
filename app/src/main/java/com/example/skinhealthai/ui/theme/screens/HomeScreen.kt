@@ -18,7 +18,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.skinhealthai.ui.screens.CameraCapture
 import com.example.skinhealthai.ui.theme.*
 import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
@@ -31,6 +30,7 @@ fun HomeScreen(
     var showCamera by remember { mutableStateOf(false) }
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     val context = LocalContext.current
+    val uiState by imageViewModel.uiState.collectAsState()
 
     Column(
         modifier = Modifier
@@ -95,6 +95,50 @@ fun HomeScreen(
                     .clip(RoundedCornerShape(12.dp))
             )
         }
+
+        when {
+            uiState.isLoading -> {
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator()
+                Text(
+                    text = "Analisando imagem...",
+                    fontSize = 16.sp,
+                    color = Color.Gray
+                )
+            }
+
+            uiState.result != null -> {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "✅ Resultado da IA:",
+                    color = BluePrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = uiState.result ?: "",
+                    fontSize = 16.sp,
+                    color = Color.Black
+                )
+            }
+
+            uiState.error != null -> {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "❌ Erro ao analisar imagem:",
+                    color = Color.Red,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = uiState.error ?: "",
+                    fontSize = 14.sp,
+                    color = Color.Red
+                )
+            }
+        }
     }
 
     if (showCamera) {
@@ -104,7 +148,15 @@ fun HomeScreen(
                 showCamera = false
 
                 bitmap?.let {
-                    FileUtils.saveBitmapToGallery(context, it)
+                    // Salva na galeria (com fallback para cache)
+                    val imageFile = FileUtils.saveBitmapToGallery(context, it)
+                    if (imageFile != null) {
+                        imageViewModel.uploadImage(imageFile)
+                    } else {
+                        // fallback se não conseguir salvar
+                        val fallbackFile = FileUtils.saveBitmapToFile(context, it)
+                        imageViewModel.uploadImage(fallbackFile)
+                    }
                 }
             }
         )
