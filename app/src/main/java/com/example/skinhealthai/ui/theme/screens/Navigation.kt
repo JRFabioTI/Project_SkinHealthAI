@@ -8,6 +8,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.example.skinhealthai.utils.FileUtils
+import com.example.skinhealthai.utils.ImageStorage
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 
 @Composable
@@ -26,7 +29,7 @@ fun AppNavigation(navController: NavHostController) {
 //            )
 //        }
         composable("home") {
-            HomeScreen2(
+            HomeScreen(
                 navController = navController,
                 imageViewModel = imageUploadViewModel
             )
@@ -36,39 +39,32 @@ fun AppNavigation(navController: NavHostController) {
             PatientRecordScreen(
                 userName = "Dr. Médico",
                 onLogout = { /* logout */ },
-                onBack = { navController.popBackStack() },  // Aqui volta para a HomeScreen
+                onBack = { navController.popBackStack() },
                 imageViewModel = imageUploadViewModel
             )
         }
 
+        composable("image_gallery") {
+            ImageGalleryScreen(navController = navController)
+        }
+        composable(
+           "scan_image/{index}",
+            arguments = listOf(navArgument("index") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val index = backStackEntry.arguments?.getInt("index") ?: 0
+            val bitmap = ImageStorage.getImage(index)
 
-
-
-
-
-
-
-//        composable("image_gallery") {
-//            ImageGalleryScreen(navController = navController)
-//        }
-//        composable(
-//            "scan_image/{index}",
-//            arguments = listOf(navArgument("index") { type = NavType.IntType })
-//        ) { backStackEntry ->
-//            val index = backStackEntry.arguments?.getInt("index") ?: 0
-//            val bitmap = ImageStorage.getImage(index)
-//
-//            if (bitmap != null) {
-//                ImageDetailScreen(
-//                    bitmap = bitmap,
-//                    onAnalyzeClick = {
-//                        val file = FileUtils.saveBitmapToFile(context, bitmap)
-//                        imageUploadViewModel.uploadImage(file)
-//                    }
-//                )
-//            } else {
-//                Text("Imagem não encontrada")
-//            }
-//        }
+            if (bitmap != null) {
+                ImageDetailScreen(
+                    bitmap = bitmap,
+                    onAnalyzeClick = {
+                        val file = FileUtils.saveBitmapToFile(context, bitmap)
+                        imageUploadViewModel.uploadImage(file)
+                    }
+                )
+            } else {
+               Text("Imagem não encontrada")
+            }
+        }
     }
 }
