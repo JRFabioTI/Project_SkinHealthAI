@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 
 @Composable
@@ -38,6 +39,26 @@ fun AppNavigation(navController: NavHostController) {
                 onLogout = { /* logout */ },
                 onBack = { navController.popBackStack() },  // Aqui volta para a HomeScreen
                 imageViewModel = imageUploadViewModel
+            )
+        }
+
+        composable(
+            route = "patient_record/{patientId}",
+            arguments = listOf(navArgument("patientId") {
+                type = NavType.StringType
+                defaultValue = "" // valor padrão caso não passe o parâmetro
+                nullable = true
+            })
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId") ?: ""
+            PatientRecordScreen(
+                userName = "Dr. Médico",
+                onLogout = { /* logout */ },
+                onBack = { navController.popBackStack() },
+                imageViewModel = imageUploadViewModel,
+                photoBitmap = imageUploadViewModel.capturedBitmap,
+                initialPhotoLocation = "", // pode buscar por pacienteId se quiser
+                iaAnalysis = "Resultado da IA para paciente $patientId"
             )
         }
 

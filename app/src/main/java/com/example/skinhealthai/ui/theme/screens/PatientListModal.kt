@@ -28,6 +28,7 @@ import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 fun PatientListModal(
     onDismissRequest: () -> Unit,
     onNewPatientClick: () -> Unit,
+    onPatientSelected: (Patient) -> Unit,
     navController: NavHostController,
     imageViewModel: ImageUploadViewModel
 ) {
@@ -71,9 +72,8 @@ fun PatientListModal(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    // ação de escolher paciente
                                     onDismissRequest()
-                                    // navegar ou salvar dados
+                                    onPatientSelected(patient)
                                 }
                                 .padding(12.dp)
                         )

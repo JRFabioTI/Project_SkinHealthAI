@@ -1,5 +1,6 @@
 package com.example.skinhealthai.viewmodel
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.skinhealthai.repository.ImageRepository

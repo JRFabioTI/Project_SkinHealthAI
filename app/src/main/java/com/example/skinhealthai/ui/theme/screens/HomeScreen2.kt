@@ -36,6 +36,8 @@ fun HomeScreen2(
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var showPatientListModal by remember { mutableStateOf(false) }
     var showPatientRegisterModal by remember { mutableStateOf(false) }
+    var selectedPatient by remember { mutableStateOf<Patient?>(null) }
+
 
     Scaffold(
         topBar = {
@@ -60,7 +62,7 @@ fun HomeScreen2(
 
             item {
                 FeaturesSection(
-                    onNovaAnaliseClick = { showCamera = true },
+                    onNovaAnaliseClick = { showPatientListModal = true },
                     onCadastrarPacienteClick = { showPatientRegisterModal = true }
                 )
             }
@@ -87,7 +89,9 @@ fun HomeScreen2(
                     FileUtils.saveBitmapToGallery(context, it)
                     imageViewModel.capturedBitmap = it
                 }
-                showPatientListModal = true
+                selectedPatient?.let { patient ->
+                    navController.navigate("patient_record/${patient.id}")
+                }
             }
         )
     }
@@ -96,6 +100,11 @@ fun HomeScreen2(
     if (showPatientListModal) {
         PatientListModal(
             onDismissRequest = { showPatientListModal = false },
+            onPatientSelected = { patient ->
+                selectedPatient = patient
+                showPatientListModal = false
+                showCamera = true
+            },
             onNewPatientClick = {
                 showPatientListModal = false
                 showPatientRegisterModal = true
@@ -111,7 +120,6 @@ fun HomeScreen2(
             onDismissRequest = { showPatientRegisterModal = false },
             onSave = {
                 showPatientRegisterModal = false
-                navController.navigate("patient_record")
             }
         )
     }
