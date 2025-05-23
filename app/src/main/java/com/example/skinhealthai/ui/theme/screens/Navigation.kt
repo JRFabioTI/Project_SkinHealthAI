@@ -22,12 +22,11 @@ fun AppNavigation(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "signup") {
         composable("signup") { SignUpScreen(navController) }
         composable("login") { LoginScreen(navController) }
-//        composable("home") {
-//            HomeScreen(
-//                navController = navController,
-//                imageViewModel = imageUploadViewModel
-//            )
-//        }
+        composable("home") { HomeScreen(
+                navController = navController,
+                imageViewModel = imageUploadViewModel
+            )
+        }
         composable("home") {
             HomeScreen(
                 navController = navController,

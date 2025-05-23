@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.skinhealthai"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.skinhealthai"
@@ -41,6 +41,7 @@ android {
     buildFeatures {
         compose = true
     }
+    buildToolsVersion = "33.0.1"
 }
 
 dependencies {
