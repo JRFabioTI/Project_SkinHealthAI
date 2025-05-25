@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.skinhealthai"
-    compileSdk = 34
+    compileSdk = 36
+
 
     defaultConfig {
         applicationId = "com.example.skinhealthai"
@@ -69,6 +70,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
 
     // Testes
     testImplementation(libs.junit)
