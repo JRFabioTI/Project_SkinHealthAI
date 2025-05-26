@@ -9,12 +9,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitInstance {
 
     // URL base da sua API (10.0.2.2 é o localhost do emulador Android)
-    private const val BASE_URL = "http://10.0.2.2:8000"
+    private const val BASE_URL = "http://172.17.144.1:8000"
 
     // Configuração do cliente OkHttp com interceptor para logging
     private val client by lazy {
         val logging = HttpLoggingInterceptor()
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY) // Log completo para debug
+        logging.setLevel(HttpLoggingInterceptor.Level.BODY)
         OkHttpClient.Builder()
             .addInterceptor(logging)
             .build()
@@ -25,7 +25,7 @@ object RetrofitInstance {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create()) // Converte JSON automaticamente
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)
     }
