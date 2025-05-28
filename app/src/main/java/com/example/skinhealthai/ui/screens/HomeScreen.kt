@@ -1,12 +1,39 @@
 package com.example.skinhealthai.ui.theme.screens
 
-import PatientListModal
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,13 +41,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.example.skinhealthai.data.model.Patient
+import com.example.skinhealthai.data.samplePatients
+import com.example.skinhealthai.ui.components.FeatureCard
+import com.example.skinhealthai.ui.components.TopBarLoggedIn
+import com.example.skinhealthai.ui.components.modals.PatientListModal
+import com.example.skinhealthai.ui.components.modals.PatientRegisterModal
 import com.example.skinhealthai.ui.screens.CameraCapture
 import com.example.skinhealthai.utils.FileUtils
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.navigation.NavHostController
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,9 +69,6 @@ fun HomeScreen(
             TopBarLoggedIn(
                 userName = "Dr. Médico",
                 onLogout = {
-                    // TODO: implementar logout real
-                    println("Usuário deslogou")
-                    // Pode navegar para login aqui se quiser
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
@@ -60,7 +88,8 @@ fun HomeScreen(
             item {
                 FeaturesSection(
                     onNovaAnaliseClick = { showCamera = true },
-                    onCadastrarPacienteClick = { showPatientRegisterModal = true }
+                    onCadastrarPacienteClick = { showPatientRegisterModal = true },
+                    onHistoricoClick = { navController.navigate("analysis_history") }
                 )
             }
 
@@ -68,12 +97,32 @@ fun HomeScreen(
 
             item {
                 RecentPatientsTable(
-                    patients = samplePatients,
+                    patients = samplePatients.take(3),
                     onPatientClick = { patientId ->
-                        // Navegar para detalhes do paciente, exemplo:
-                        navController.navigate("patient_record")
+                        patientId?.let { id ->
+                            navController.navigate("patient_record/${id}")
+                        } ?: run {
+                            println("ID do paciente nulo, não é possível navegar.")
+                        }
                     }
                 )
+            }
+
+            item {
+                TextButton(
+                    onClick = { navController.navigate("patient_list") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Ver Todos os Pacientes", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Ver todos")
+                    }
+                }
             }
 
             item { Footer() }
@@ -116,55 +165,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TopBarLoggedIn(
-    userName: String,
-    onLogout: () -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    TopAppBar(
-        title = {
-            Text(
-                text = "SkinHealthAI",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        actions = {
-            IconButton(onClick = { /* TODO: notificações */ }) {
-                Icon(Icons.Default.Notifications, contentDescription = "Notificações")
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable { expanded = true }
-                    .padding(horizontal = 8.dp)
-            ) {
-                Icon(Icons.Default.Person, contentDescription = "Usuário", modifier = Modifier.size(32.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = userName)
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Logout") },
-                    onClick = {
-                        expanded = false
-                        onLogout()
-                    }
-                )
-            }
-        }
-    )
-}
 
 @Composable
 fun WelcomeHeader(name: String) {
@@ -185,7 +185,8 @@ fun WelcomeHeader(name: String) {
 @Composable
 fun FeaturesSection(
     onNovaAnaliseClick: () -> Unit,
-    onCadastrarPacienteClick: () -> Unit
+    onCadastrarPacienteClick: () -> Unit,
+    onHistoricoClick: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         FeatureCard(
@@ -196,37 +197,13 @@ fun FeaturesSection(
         FeatureCard(
             title = "Histórico",
             description = "Veja exames anteriores do mesmo paciente",
-            onClick = { /* TODO: Implementar histórico */ }
+            onClick = onHistoricoClick
         )
         FeatureCard(
             title = "Cadastrar novo Paciente",
             description = "Cadastre um novo paciente no sistema",
             onClick = onCadastrarPacienteClick
         )
-    }
-}
-
-@Composable
-fun FeatureCard(
-    title: String,
-    description: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = description, style = MaterialTheme.typography.bodyMedium)
-        }
     }
 }
 
@@ -242,7 +219,7 @@ fun RecentPatientsTitle() {
 @Composable
 fun RecentPatientsTable(
     patients: List<Patient>,
-    onPatientClick: (String) -> Unit
+    onPatientClick: (Int?) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -252,19 +229,28 @@ fun RecentPatientsTable(
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("PACIENTE", fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
-                Text("IDADE", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("ÚLTIMA ANÁLISE", fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
-                Text("RESULTADO", fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
-                Text("AÇÕES", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("PACIENTE", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             }
 
             HorizontalDivider()
 
-            LazyColumn {
-                items(patients) { patient ->
-                    PatientRow(patient = patient, onClick = { onPatientClick(patient.id) })
-                    HorizontalDivider()
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 300.dp)
+            ) {
+                if (patients.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Nenhum paciente recente encontrado.",
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    items(patients) { patient ->
+                        PatientRow(patient = patient, onClick = { onPatientClick(patient.id) })
+                        HorizontalDivider()
+                    }
                 }
             }
         }
@@ -280,13 +266,7 @@ fun PatientRow(patient: Patient, onClick: () -> Unit) {
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(patient.name, modifier = Modifier.weight(2f))
-        Text(patient.age.toString(), modifier = Modifier.weight(1f))
-        Text(patient.lastAnalysis, modifier = Modifier.weight(2f))
-        RiskBadge(patient.risk, modifier = Modifier.weight(2f))
-        TextButton(onClick = onClick, modifier = Modifier.weight(1f)) {
-            Text("Ver")
-        }
+        Text(patient.name, modifier = Modifier.weight(1f))
     }
 }
 
@@ -330,18 +310,3 @@ fun Footer() {
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
-
-// Dados de exemplo
-val samplePatients = listOf(
-    Patient("1", "João Silva", 38, "10/05/2024", "Baixo Risco"),
-    Patient("2", "Maria Souza", 29, "12/05/2024", "Médio Risco"),
-    Patient("3", "Ana Oliveira", 46, "15/05/2024", "Alto Risco"),
-)
-
-data class Patient(
-    val id: String,
-    val name: String,
-    val age: Int,
-    val lastAnalysis: String,
-    val risk: String
-)

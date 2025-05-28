@@ -1,4 +1,4 @@
-package com.example.skinhealthai.ui.theme.screens
+package com.example.skinhealthai.ui.screens
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.skinhealthai.viewmodel.LoginViewModel

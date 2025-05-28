@@ -1,4 +1,4 @@
-package com.example.skinhealthai.data.model.models
+package com.example.skinhealthai.data.model
 
 data class PredictionResponse(
     val result: String

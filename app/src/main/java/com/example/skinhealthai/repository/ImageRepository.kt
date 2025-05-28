@@ -1,7 +1,7 @@
-package com.example.skinhealthai.data.repository
+package com.example.skinhealthai.repository
 
 import com.example.skinhealthai.data.network.RetrofitInstance
-import com.example.skinhealthai.data.model.models.PredictionResponse
+import com.example.skinhealthai.data.model.PredictionResponse
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody

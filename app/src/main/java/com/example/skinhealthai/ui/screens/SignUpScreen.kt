@@ -1,4 +1,4 @@
-package com.example.skinhealthai.ui.theme.screens
+package com.example.skinhealthai.ui.screens
 
 import android.widget.Toast // Importe Toast para feedback ao usuário
 import androidx.compose.foundation.background
@@ -18,9 +18,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.skinhealthai.ui.theme.* // Seus temas customizados
 import com.example.skinhealthai.data.model.UserRequest // Importe UserRequest
 import com.example.skinhealthai.data.network.RetrofitInstance // Importe RetrofitInstance
+import com.example.skinhealthai.ui.theme.BluePrimary
+import com.example.skinhealthai.ui.theme.BlueSecondary
+import com.example.skinhealthai.ui.theme.LightGray
 import kotlinx.coroutines.launch // Importe launch para coroutines
 import retrofit2.HttpException // Importe HttpException para tratamento de erro de rede
 

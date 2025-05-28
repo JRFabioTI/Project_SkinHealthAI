@@ -1,4 +1,4 @@
-package com.example.skinhealthai.ui.theme.screens
+package com.example.skinhealthai.ui.components.modals
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

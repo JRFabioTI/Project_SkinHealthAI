@@ -3,10 +3,9 @@ package com.example.skinhealthai.ui.viewmodel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.skinhealthai.data.model.models.Patient
-import com.example.skinhealthai.data.repository.PatientRepository
+import com.example.skinhealthai.data.model.Patient
+import com.example.skinhealthai.repository.PatientRepository
 import kotlinx.coroutines.launch
-import retrofit2.Response
 
 class PatientViewModel(private val repository: PatientRepository): ViewModel() {
 

@@ -1,6 +1,6 @@
-package com.example.skinhealthai.data.repository
+package com.example.skinhealthai.repository
 
-import com.example.skinhealthai.data.model.models.Patient
+import com.example.skinhealthai.data.model.Patient
 import com.example.skinhealthai.data.network.ApiService
 import retrofit2.Response
 

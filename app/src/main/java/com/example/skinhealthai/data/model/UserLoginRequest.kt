@@ -1,4 +1,4 @@
-package com.example.skinhealthai.data
+package com.example.skinhealthai.data.model
 
 data class UserLoginRequest(
     val username: String,

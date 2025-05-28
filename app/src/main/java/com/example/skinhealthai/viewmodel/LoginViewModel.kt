@@ -2,9 +2,9 @@ package com.example.skinhealthai.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.skinhealthai.data.UserLoginRequest
+import com.example.skinhealthai.data.model.UserLoginRequest
 import com.example.skinhealthai.data.model.UserResponse
-import com.example.skinhealthai.data.repository.AuthRepository
+import com.example.skinhealthai.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

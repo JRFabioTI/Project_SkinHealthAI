@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.navigation.compose.rememberNavController
 import com.example.skinhealthai.ui.theme.SkinHealthAITheme
-import com.example.skinhealthai.ui.theme.screens.AppNavigation
+import com.example.skinhealthai.ui.screens.AppNavigation
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

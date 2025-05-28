@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.skinhealthai.data.model.UserRequest
 import com.example.skinhealthai.data.model.UserResponse
-import com.example.skinhealthai.data.repository.UserRepository
+import com.example.skinhealthai.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch

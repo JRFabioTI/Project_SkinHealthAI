@@ -1,10 +1,10 @@
 package com.example.skinhealthai.data.network
 
-import com.example.skinhealthai.data.UserLoginRequest
+import com.example.skinhealthai.data.model.UserLoginRequest
 import com.example.skinhealthai.data.model.UserRequest
 import com.example.skinhealthai.data.model.UserResponse
-import com.example.skinhealthai.data.model.models.Patient
-import com.example.skinhealthai.data.model.models.PredictionResponse
+import com.example.skinhealthai.data.model.Patient
+import com.example.skinhealthai.data.model.PredictionResponse
 import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*

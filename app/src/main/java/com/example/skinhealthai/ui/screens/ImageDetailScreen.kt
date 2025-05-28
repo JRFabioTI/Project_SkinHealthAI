@@ -1,4 +1,4 @@
-package com.example.skinhealthai.ui.theme.screens
+package com.example.skinhealthai.ui.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image

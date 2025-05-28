@@ -1,6 +1,6 @@
-package com.example.skinhealthai.data.repository
+package com.example.skinhealthai.repository
 
-import com.example.skinhealthai.data.UserLoginRequest
+import com.example.skinhealthai.data.model.UserLoginRequest
 import com.example.skinhealthai.data.model.UserRequest
 import com.example.skinhealthai.data.model.UserResponse
 import com.example.skinhealthai.data.network.RetrofitInstance
