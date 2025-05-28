@@ -1,0 +1,73 @@
+## Como Compilar e Executar a Aplicação
+
+Você pode compilar e executar o projeto utilizando o **Android Studio** (recomendado para desenvolvimento) ou via **linha de comando**.
+
+### 1. Usando uma IDE (Android Studio)
+
+Esta é a maneira mais comum e recomendada para desenvolver e testar aplicativos Android.
+
+1.  **Abra o Projeto:**
+    * Inicie o **Android Studio**.
+    * Na tela de boas-vindas, selecione **"Open an existing Android Studio project"** ou vá em `File > Open...`.
+    * Navegue até o diretório raiz deste projeto Kotlin e selecione-o.
+
+2.  **Sincronize o Gradle:**
+    * Após abrir o projeto, o Android Studio iniciará uma sincronização do Gradle para baixar todas as dependências necessárias. Aguarde a conclusão. Se houver problemas, um botão **"Sync Now"** ou **"Try again"** pode aparecer.
+
+3.  **Selecione o Dispositivo/Emulador:**
+    * No topo da janela do Android Studio, na barra de ferramentas, você verá um seletor de dispositivo.
+    * Escolha um **emulador** que você já tenha configurado ou conecte um **dispositivo Android físico** via USB (certifique-se de que a depuração USB esteja ativada nas **Opções do Desenvolvedor** do seu aparelho).
+
+4.  **Execute a Aplicação:**
+    * Clique no botão **"Run"** (o ícone de triângulo verde) na barra de ferramentas do Android Studio.
+    * O Gradle irá construir o APK, e o Android Studio o instalará no dispositivo/emulador selecionado, iniciando o aplicativo automaticamente.
+
+---
+
+### 2. Usando um Editor de Código e Linha de Comando (Gradle)
+
+Você pode usar seu editor de código preferido para editar o código e o terminal para compilar e executar o projeto diretamente via Gradle.
+
+1.  **Navegue até o Diretório Raiz do Projeto:**
+    Abra seu terminal ou prompt de comando e vá até a pasta raiz do projeto Kotlin (onde o arquivo `build.gradle` principal está localizado).
+
+    ```bash
+    cd /caminho/para/o/seu/projeto/kotlin
+    ```
+
+2.  **Comandos Gradle:**
+
+    * **Limpar o Projeto (Recomendado antes de um novo build):**
+        ```bash
+        ./gradlew clean
+        ```
+        (No Windows, use `gradlew.bat clean`)
+
+    * **Construir o APK (Versão Debug):**
+        Este comando compilará o projeto e gerará um APK de depuração. O APK será salvo em `app/build/outputs/apk/debug/`.
+
+        ```bash
+        ./gradlew assembleDebug
+        ```
+        (No Windows, use `gradlew.bat assembleDebug`)
+
+    * **Instalar o APK em um Dispositivo/Emulador Conectado:**
+        Para instalar o aplicativo, certifique-se de ter um dispositivo Android físico conectado com depuração USB ativada ou um emulador em execução. O `adb` (Android Debug Bridge) precisa estar configurado no seu PATH do sistema.
+
+        ```bash
+        ./gradlew installDebug
+        ```
+        (No Windows, use `gradlew.bat installDebug`)
+
+        *Alternativamente, você pode instalar manualmente com ADB:*
+        ```bash
+        adb install app/build/outputs/apk/debug/app-debug.apk
+        ```
+
+    * **Rodar Testes (Opcional):**
+        Para executar os testes unitários e de instrumentação (se o projeto os possuir):
+
+        ```bash
+        ./gradlew test # Para testes unitários
+        ./gradlew connectedCheck # Para testes de instrumentação (requer dispositivo/emulador conectado)
+        ```
