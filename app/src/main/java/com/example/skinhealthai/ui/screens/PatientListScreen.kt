@@ -3,7 +3,6 @@ package com.example.skinhealthai.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,26 +14,49 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.skinhealthai.data.samplePatients
 import com.example.skinhealthai.data.model.Patient
+import androidx.compose.ui.platform.LocalContext
+import com.example.skinhealthai.utils.FileUtils
+import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientListScreen(navController: NavHostController) {
+fun PatientListScreen(
+    navController: NavHostController,
+    imageViewModel: ImageUploadViewModel // ViewModel para armazenar imagem capturada
+) {
+    var textFieldValue by remember { mutableStateOf("") }
+    var showCamera by remember { mutableStateOf(false) }
+    var selectedPatientId by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
+
+    // Filtra pacientes conforme o texto no filtro
+    val filteredPatients = remember(textFieldValue) {
+        if (textFieldValue.isBlank()) samplePatients
+        else samplePatients.filter {
+            it.name.contains(textFieldValue, ignoreCase = true)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Lista de Pacientes", fontWeight = FontWeight.Bold) },
+                title = { Text("Escolha um paciente da sua lista", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    // Botão de voltar para a tela anterior
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
@@ -42,54 +64,75 @@ fun PatientListScreen(navController: NavHostController) {
             )
         }
     ) { paddingValues ->
-        // LazyColumn para exibir a lista de pacientes de forma eficiente
-        LazyColumn(
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues) // Aplica o padding do Scaffold
-                .padding(horizontal = 16.dp, vertical = 8.dp) // Padding adicional para o conteúdo da lista
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Verifica se a lista de pacientes está vazia
-            if (samplePatients.isEmpty()) {
-                item {
-                    Text(
-                        text = "Nenhum paciente cadastrado.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    )
-                }
-            } else {
-                items(samplePatients) { patient ->
-                    PatientListItem(
-                        patient = patient,
-                        onClick = { patientId ->
-                            patientId?.let { id ->
-                                navController.navigate("patient_record/${id}")
-                            } ?: run {
-                                println("ID do paciente nulo, não é possível navegar para o registro.")
+            OutlinedTextField(
+                value = textFieldValue,
+                onValueChange = { textFieldValue = it },
+                label = { Text("Filtro") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                singleLine = true
+            )
+
+            LazyColumn {
+                if (filteredPatients.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Nenhum paciente encontrado.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        )
+                    }
+                } else {
+                    items(filteredPatients) { patient ->
+                        PatientListItem(
+                            patient = patient,
+                            onClick = {
+                                selectedPatientId = patient.id
+                                showCamera = true
                             }
-                        }
-                    )
-                    Divider()
+                        )
+                        Divider()
+                    }
                 }
             }
         }
     }
-}
 
+    // Se showCamera for true, abre o componente de captura
+    if (showCamera && selectedPatientId != null) {
+        CameraCapture(
+            onImageCaptured = { bitmap ->
+                showCamera = false
+                bitmap?.let {
+                    FileUtils.saveBitmapToGallery(context, it)
+                    imageViewModel.capturedBitmap = it
+                }
+                // Navega para prontuário do paciente selecionado
+                navController.navigate("patient_record/${selectedPatientId}")
+                selectedPatientId = null
+            },
+        )
+    }
+}
 
 @Composable
 fun PatientListItem(
     patient: Patient,
-    onClick: (Int?) -> Unit
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick(patient.id) }
-            .padding(vertical = 12.dp, horizontal = 0.dp)
+            .clickable { onClick() }
+            .padding(vertical = 12.dp)
     ) {
         Column {
             Text(

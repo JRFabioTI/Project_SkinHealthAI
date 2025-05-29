@@ -34,6 +34,7 @@ object AppRoutes {
     const val IMAGE_GALLERY = "image_gallery"
     const val SCAN_IMAGE_BASE = "scan_image"
     const val SCAN_IMAGE_WITH_INDEX = "$SCAN_IMAGE_BASE/{index}"
+    const val PATIENT_REGISTER = "patient_register"
 }
 
 @Composable
@@ -58,12 +59,21 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         composable(AppRoutes.PATIENT_LIST) {
-            PatientListScreen(navController = navController)
+            PatientListScreen(
+                navController = navController,
+                imageViewModel = imageUploadViewModel
+            )
         }
 
         composable(AppRoutes.ANALYSIS_HISTORY) {
             AnalysisHistoryScreen(navController = navController)
         }
+
+        composable(AppRoutes.PATIENT_REGISTER) {
+            PatientRegisterScreen(navController = navController)
+
+        }
+
 
         composable(
             route = AppRoutes.PATIENT_RECORD_WITH_ID,

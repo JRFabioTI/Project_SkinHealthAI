@@ -30,7 +30,7 @@ fun PatientRecordScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = patient?.name ?: "Registro do Paciente",
+                        text = "Prontuário",
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -79,25 +79,7 @@ fun PatientRecordScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = {
-                        println("Ver Histórico de Análises para ${patient.name}")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Ver Histórico de Análises")
-                }
-
-                Button(
-                    onClick = {
-                        println("Iniciar Nova Análise para ${patient.name}")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Iniciar Nova Análise")
-                }
             }
         }
     }

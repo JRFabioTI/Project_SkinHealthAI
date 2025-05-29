@@ -14,9 +14,10 @@ val samplePatients = listOf(
 )
 
 val sampleAnalysisHistory = listOf(
-    AnalysisHistoryItem("analise_001", "João Silva", "10/05/2024", "Melanoma suspeito", "Alto Risco"),
-    AnalysisHistoryItem("analise_002", "Maria Souza", "12/05/2024", "Nevus comum", "Baixo Risco"),
-    AnalysisHistoryItem("analise_003", "Ana Oliveira", "15/05/2024", "Queratose actínica", "Médio Risco"),
-    AnalysisHistoryItem("analise_004", "Carlos Santos", "01/05/2024", "Eczema", "Baixo Risco"),
-    AnalysisHistoryItem("analise_005", "Beatriz Costa", "08/04/2024", "Dermatite de contato", "Baixo Risco"),
+    AnalysisHistoryItem("analise_001", 1, "João Silva", "10/05/2024", "Melanoma suspeito", "Alto Risco"),
+    AnalysisHistoryItem("analise_002", 2, "Maria Souza", "12/05/2024", "Nevus comum", "Baixo Risco"),
+    AnalysisHistoryItem("analise_003", 3, "Ana Oliveira", "15/05/2024", "Queratose actínica", "Médio Risco"),
+    AnalysisHistoryItem("analise_004", 4, "Carlos Santos", "01/05/2024", "Eczema", "Baixo Risco"),
+    AnalysisHistoryItem("analise_005", 5, "Beatriz Costa", "08/04/2024", "Dermatite de contato", "Baixo Risco"),
 )
+

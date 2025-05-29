@@ -59,10 +59,6 @@ fun HomeScreen(
     navController: NavHostController,
     imageViewModel: ImageUploadViewModel,
 ) {
-    var showCamera by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    var showPatientListModal by remember { mutableStateOf(false) }
-    var showPatientRegisterModal by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -87,8 +83,8 @@ fun HomeScreen(
 
             item {
                 FeaturesSection(
-                    onNovaAnaliseClick = { showCamera = true },
-                    onCadastrarPacienteClick = { showPatientRegisterModal = true },
+                    onNovaAnaliseClick = { navController.navigate("patient_list") },
+                    onCadastrarPacienteClick = { navController.navigate("patient_register") },
                     onHistoricoClick = { navController.navigate("analysis_history") }
                 )
             }
@@ -129,40 +125,6 @@ fun HomeScreen(
         }
     }
 
-    if (showCamera) {
-        CameraCapture(
-            onImageCaptured = { bitmap ->
-                showCamera = false
-                bitmap?.let {
-                    FileUtils.saveBitmapToGallery(context, it)
-                    imageViewModel.capturedBitmap = it
-                }
-                showPatientListModal = true
-            }
-        )
-    }
-
-    if (showPatientListModal) {
-        PatientListModal(
-            onDismissRequest = { showPatientListModal = false },
-            onNewPatientClick = {
-                showPatientListModal = false
-                showPatientRegisterModal = true
-            },
-            navController = navController,
-            imageViewModel = imageViewModel
-        )
-    }
-
-    if (showPatientRegisterModal) {
-        PatientRegisterModal(
-            onDismissRequest = { showPatientRegisterModal = false },
-            onSave = {
-                showPatientRegisterModal = false
-                navController.navigate("patient_record")
-            }
-        )
-    }
 }
 
 
