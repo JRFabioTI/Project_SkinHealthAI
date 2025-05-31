@@ -37,6 +37,8 @@ fun ConsultationScreen(
     // Estados para os campos da consulta
     // Inicializa com a data/hora atual formatada
     var consultationDate by remember { mutableStateOf(SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())) }
+    // Add the declaration for photoLocation here
+    var photoLocation by remember { mutableStateOf("") } // <-- FIX: Declare photoLocation here
     // Preenche com "Imagem capturada" se houver uma imagem no ImageUploadViewModel
     var notes by remember { mutableStateOf("") }
 
@@ -62,7 +64,7 @@ fun ConsultationScreen(
                 Toast.makeText(context, "Consulta registrada com sucesso!", Toast.LENGTH_SHORT).show()
                 // Limpar campos após o sucesso
                 consultationDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                photoLocation = ""
+                photoLocation = "" // Now photoLocation is recognized
                 notes = ""
                 consultationViewModel.resetConsultationCreationState()
                 // Opcional: Navegar de volta ou para a tela de prontuário após salvar
@@ -208,7 +210,7 @@ fun ConsultationScreen(
                         if (consultationCreationState is ConsultationCreationState.Loading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else {
-                            Text("Registrar Consulta")
+                            Text("Salvar")
                         }
                     }
                 }
@@ -224,4 +226,3 @@ fun ConsultationScreen(
         }
     }
 }
-
