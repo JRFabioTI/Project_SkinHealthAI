@@ -1,8 +1,10 @@
-// com.example.skinhealthai.ui.viewmodel/ConsultationViewModel.kt (ou mantenha PatientRecordViewModel.kt)
+// com.example.skinhealthai.ui.viewmodel/ConsultationViewModel.kt
 package com.example.skinhealthai.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+// Importe ConsultationResponse, já que seus repositórios o retornam
+import com.example.skinhealthai.data.model.ConsultationResponse // Ajustado para ConsultationResponse
 import com.example.skinhealthai.data.model.ConsultationRequest
 import com.example.skinhealthai.data.model.PatientResponse
 import com.example.skinhealthai.repository.PatientRepository
@@ -12,7 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 // Estados para a UI da tela de consulta (carregamento do paciente)
-sealed class PatientDataUiState { // Renomeado para mais clareza para esta tela
+sealed class PatientDataUiState {
     object Loading : PatientDataUiState()
     data class PatientLoaded(val patient: PatientResponse) : PatientDataUiState()
     data class Error(val message: String) : PatientDataUiState()
@@ -26,7 +28,17 @@ sealed class ConsultationCreationState {
     data class Error(val message: String) : ConsultationCreationState()
 }
 
-class ConsultationViewModel( // Renomeado a classe para refletir o propósito
+// Estados para o carregamento do histórico de consultas
+sealed class PatientConsultationsUiState {
+    object Loading : PatientConsultationsUiState()
+    // Ajustado para List<ConsultationResponse> para ser consistente com o repositório
+    data class Loaded(val consultations: List<ConsultationResponse>) : PatientConsultationsUiState()
+    data class Error(val message: String) : PatientConsultationsUiState()
+    object Idle : PatientConsultationsUiState()
+}
+
+
+class ConsultationViewModel(
     private val patientRepository: PatientRepository = PatientRepository(),
     private val consultationRepository: ConsultationRepository = ConsultationRepository()
 ) : ViewModel() {
@@ -36,6 +48,10 @@ class ConsultationViewModel( // Renomeado a classe para refletir o propósito
 
     private val _consultationCreationState = MutableStateFlow<ConsultationCreationState>(ConsultationCreationState.Idle)
     val consultationCreationState: StateFlow<ConsultationCreationState> = _consultationCreationState
+
+    private val _patientConsultationsUiState = MutableStateFlow<PatientConsultationsUiState>(PatientConsultationsUiState.Idle)
+    val patientConsultationsUiState: StateFlow<PatientConsultationsUiState> = _patientConsultationsUiState
+
 
     fun loadPatient(patientId: Int) {
         viewModelScope.launch {
@@ -61,6 +77,8 @@ class ConsultationViewModel( // Renomeado a classe para refletir o propósito
                 val response = consultationRepository.createConsultation(consultationRequest)
                 if (response.isSuccessful && response.body() != null) {
                     _consultationCreationState.value = ConsultationCreationState.Success
+                    // Se a consulta for criada com sucesso, recarregue as consultas do paciente
+                    consultationRequest.patientId?.let { loadPatientConsultations(it) }
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao registrar consulta."
                     _consultationCreationState.value = ConsultationCreationState.Error(message)
@@ -71,8 +89,25 @@ class ConsultationViewModel( // Renomeado a classe para refletir o propósito
         }
     }
 
+    fun loadPatientConsultations(patientId: Int) {
+        viewModelScope.launch {
+            _patientConsultationsUiState.value = PatientConsultationsUiState.Loading
+            try {
+                val response = consultationRepository.getConsultationsByPatientId(patientId)
+                if (response.isSuccessful && response.body() != null) {
+                    // Use ConsultationResponse aqui para ser consistente com o retorno do repositório
+                    _patientConsultationsUiState.value = PatientConsultationsUiState.Loaded(response.body()!!)
+                } else {
+                    val message = response.errorBody()?.string() ?: "Nenhuma consulta encontrada ou erro ao carregar."
+                    _patientConsultationsUiState.value = PatientConsultationsUiState.Error(message)
+                }
+            } catch (e: Exception) {
+                _patientConsultationsUiState.value = PatientConsultationsUiState.Error(e.message ?: "Erro ao carregar histórico de consultas.")
+            }
+        }
+    }
+
     fun resetConsultationCreationState() {
         _consultationCreationState.value = ConsultationCreationState.Idle
     }
 }
-

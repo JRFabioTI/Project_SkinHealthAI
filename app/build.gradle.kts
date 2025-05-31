@@ -46,6 +46,7 @@ android {
 }
 
 dependencies {
+    implementation("io.coil-kt:coil-compose:2.7.0") // Use a versão mais recente se houver
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

@@ -88,4 +88,7 @@ interface ApiService {
     @DELETE("api/skin/consultation/{id}/")
     suspend fun deleteConsultation(@Path("id") id: Int): Response<Unit>
 
+    @GET("api/skin/consultation/")
+    suspend fun getConsultationsByPatientId(@Query("patient_id") patientId: Int): Response<List<ConsultationResponse>>
+
 }
