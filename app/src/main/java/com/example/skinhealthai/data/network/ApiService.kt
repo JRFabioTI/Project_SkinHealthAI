@@ -1,9 +1,13 @@
 package com.example.skinhealthai.data.network
 
+import com.example.skinhealthai.data.model.ConsultationRequest
+import com.example.skinhealthai.data.model.ConsultationResponse
 import com.example.skinhealthai.data.model.UserLoginRequest
 import com.example.skinhealthai.data.model.UserRequest
 import com.example.skinhealthai.data.model.UserResponse
 import com.example.skinhealthai.data.model.Patient
+import com.example.skinhealthai.data.model.PatientRequest
+import com.example.skinhealthai.data.model.PatientResponse
 import com.example.skinhealthai.data.model.PredictionResponse
 import okhttp3.MultipartBody
 import retrofit2.Response
@@ -48,20 +52,40 @@ interface ApiService {
 
     // CRUD de pacientes
     @GET("api/skin/patient/")
-    suspend fun getPatients(): Response<List<Patient>>
+    suspend fun getPatients(): Response<List<PatientResponse>>
 
     @GET("api/skin/patient/{id}/")
-    suspend fun getPatient(@Path("id") id: Int): Response<Patient>
+    suspend fun getPatient(@Path("id") id: Int): Response<PatientResponse>
 
     @POST("api/skin/patient/")
-    suspend fun createPatient(@Body patient: Patient): Response<Patient>
+    suspend fun createPatient(@Body patient: PatientRequest): Response<PatientResponse>
 
     @PUT("api/skin/patient/{id}/")
     suspend fun updatePatient(
         @Path("id") id: Int,
-        @Body patient: Patient
-    ): Response<Patient>
+        @Body patient: PatientRequest
+    ): Response<PatientResponse>
 
     @DELETE("api/skin/patient/{id}/")
     suspend fun deletePatient(@Path("id") id: Int): Response<Unit>
+
+    // CRUD de consultas
+    @GET("api/skin/consultation/")
+    suspend fun getConsultations(): Response<List<ConsultationResponse>>
+
+    @GET("api/skin/consultation/{id}/")
+    suspend fun getConsultation(@Path("id") id: Int): Response<ConsultationResponse>
+
+    @POST("api/skin/consultation/")
+    suspend fun createConsultation(@Body consultation: ConsultationRequest): Response<ConsultationResponse>
+
+    @PUT("api/skin/consultation/{id}/")
+    suspend fun updateConsultation(
+        @Path("id") id: Int,
+        @Body consultation: ConsultationRequest
+    ): Response<ConsultationResponse>
+
+    @DELETE("api/skin/consultation/{id}/")
+    suspend fun deleteConsultation(@Path("id") id: Int): Response<Unit>
+
 }

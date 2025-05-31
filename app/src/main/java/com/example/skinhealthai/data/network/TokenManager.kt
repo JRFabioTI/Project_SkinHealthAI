@@ -1,5 +1,19 @@
-package com.example.skinhealthai.data.network
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.core.content.edit
 
-object TokenManager {
-    var token: String? = null
+class TokenManager(context: Context) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
+
+    fun saveToken(token: String) {
+        prefs.edit { putString("token", token) }
+    }
+
+    fun getToken(): String? {
+        return prefs.getString("token", null)
+    }
+
+    fun clearToken() {
+        prefs.edit { remove("token") }
+    }
 }

@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext // Importe LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -29,6 +30,7 @@ import androidx.navigation.NavController
 import com.example.skinhealthai.ui.theme.BluePrimary
 import com.example.skinhealthai.ui.theme.BlueSecondary
 import com.example.skinhealthai.ui.theme.LightGray
+import com.example.skinhealthai.utils.AuthTokenManager // Importe seu AuthTokenManager
 
 @Composable
 fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
@@ -37,12 +39,18 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
     val focusManager = LocalFocusManager.current
     val loginState by loginViewModel.loginState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current // Obtenha o Context aqui
 
     LaunchedEffect(loginState) {
         when (loginState) {
             is LoginState.Success -> {
-                navController.navigate("home") {
-                    popUpTo("login") { inclusive = true }
+                val userResponse = (loginState as LoginState.Success).user
+                // Salva o token de autenticação usando o AuthTokenManager
+                AuthTokenManager.saveAuthToken(context, userResponse.accessToken)
+
+                snackbarHostState.showSnackbar("Login bem-sucedido!")
+                navController.navigate("home") { // Assumindo "home" é a rota para a tela principal
+                    popUpTo("login") { inclusive = true } // Limpa a pilha para não voltar para a tela de login
                 }
                 loginViewModel.resetState()
             }
@@ -50,7 +58,9 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
                 snackbarHostState.showSnackbar((loginState as LoginState.Error).message)
                 loginViewModel.resetState()
             }
-            else -> {}
+            else -> {
+                // Para Idle e Loading, não faz nada específico aqui, a UI já lida com o loading
+            }
         }
     }
 
@@ -84,14 +94,15 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
             Spacer(modifier = Modifier.height(32.dp))
 
             LoginButton(
-                enabled = email.isNotBlank() && password.isNotBlank() && loginState != LoginState.Loading,
+                enabled = email.isNotBlank() && password.isNotBlank() && loginState !is LoginState.Loading,
                 onClick = {
                     focusManager.clearFocus()
                     loginViewModel.login(email, password)
                 }
             )
 
-            if (loginState == LoginState.Loading) {
+            // Indicador de progresso de carregamento
+            if (loginState is LoginState.Loading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 CircularProgressIndicator(color = BluePrimary)
             }
@@ -111,6 +122,9 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
         )
     }
 }
+
+// Suas funções Composable auxiliares (Title, EmailInput, PasswordInput, LoginButton, SignUpPrompt, HomeButton)
+// permanecem as mesmas e não precisam ser modificadas.
 
 @Composable
 fun Title() {

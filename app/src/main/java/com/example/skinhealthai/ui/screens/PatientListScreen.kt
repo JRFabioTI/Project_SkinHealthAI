@@ -27,28 +27,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.skinhealthai.data.samplePatients
-import com.example.skinhealthai.data.model.Patient
+// REMOVIDO: import com.example.skinhealthai.data.samplePatients
+// REMOVIDO: import com.example.skinhealthai.data.model.Patient // Usaremos PatientResponse
 import androidx.compose.ui.platform.LocalContext
-import com.example.skinhealthai.utils.FileUtils
+import androidx.lifecycle.viewmodel.compose.viewModel // Importe viewModel
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
+import com.example.skinhealthai.data.model.PatientResponse // Importe PatientResponse
+import androidx.compose.runtime.LaunchedEffect // Importe LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import com.example.skinhealthai.ui.viewmodel.PatientViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientListScreen(
     navController: NavHostController,
-    imageViewModel: ImageUploadViewModel // ViewModel para armazenar imagem capturada
+    patientViewModel: PatientViewModel = viewModel() // Injete PatientViewModel
 ) {
     var textFieldValue by remember { mutableStateOf("") }
     var showCamera by remember { mutableStateOf(false) }
     var selectedPatientId by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
 
-    // Filtra pacientes conforme o texto no filtro
-    val filteredPatients = remember(textFieldValue) {
-        if (textFieldValue.isBlank()) samplePatients
-        else samplePatients.filter {
-            it.name.contains(textFieldValue, ignoreCase = true)
+    // Observe a lista de pacientes do ViewModel
+    val patientList by patientViewModel.patientList.collectAsState()
+
+    // Acione a busca de pacientes quando a tela é composta pela primeira vez
+    LaunchedEffect(Unit) {
+        patientViewModel.fetchPatients()
+    }
+
+    // FILTRO MELHORADO PARA INCLUIR NOME, CPF E EMAIL
+    val filteredPatients = remember(textFieldValue, patientList) {
+        if (textFieldValue.isBlank()) {
+            patientList
+        } else {
+            patientList.filter { patient ->
+                // Converte o termo de busca para minúsculas uma vez para comparação case-insensitive
+                val lowerCaseQuery = textFieldValue.lowercase()
+
+                // Verifica se o nome contém o termo
+                val matchesName = patient.name.lowercase().contains(lowerCaseQuery)
+
+                // Verifica se o CPF contém o termo (se o CPF não for nulo)
+                val matchesCpf = patient.cpf?.lowercase()?.contains(lowerCaseQuery) ?: false
+
+                // Verifica se o email contém o termo (se o email não for nulo)
+                val matchesEmail = patient.email?.lowercase()?.contains(lowerCaseQuery) ?: false
+
+                // Retorna true se corresponder a qualquer um dos campos
+                matchesName || matchesCpf || matchesEmail
+            }
         }
     }
 
@@ -96,7 +124,7 @@ fun PatientListScreen(
                             patient = patient,
                             onClick = {
                                 selectedPatientId = patient.id
-                                showCamera = true
+                                navController.navigate("consultation_screen/${patient.id}")
                             }
                         )
                         Divider()
@@ -106,26 +134,11 @@ fun PatientListScreen(
         }
     }
 
-    // Se showCamera for true, abre o componente de captura
-    if (showCamera && selectedPatientId != null) {
-        CameraCapture(
-            onImageCaptured = { bitmap ->
-                showCamera = false
-                bitmap?.let {
-                    FileUtils.saveBitmapToGallery(context, it)
-                    imageViewModel.capturedBitmap = it
-                }
-                // Navega para prontuário do paciente selecionado
-                navController.navigate("patient_record/${selectedPatientId}")
-                selectedPatientId = null
-            },
-        )
-    }
 }
 
 @Composable
 fun PatientListItem(
-    patient: Patient,
+    patient: PatientResponse, // Agora espera PatientResponse
     onClick: () -> Unit
 ) {
     Row(
@@ -140,9 +153,17 @@ fun PatientListItem(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium
             )
-            patient.email.takeIf { it.isNotBlank() }?.let {
+            // CPF é um bom identificador para exibir na lista
+            patient.cpf?.takeIf { it.isNotBlank() }?.let {
                 Text(
-                    text = it,
+                    text = "CPF: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            patient.email?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    text = "Email: $it",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

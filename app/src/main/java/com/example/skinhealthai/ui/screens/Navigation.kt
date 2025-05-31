@@ -61,7 +61,15 @@ fun AppNavigation(navController: NavHostController) {
         composable(AppRoutes.PATIENT_LIST) {
             PatientListScreen(
                 navController = navController,
-                imageViewModel = imageUploadViewModel
+            )
+        }
+
+        // Exemplo de rota no seu NavHost
+        composable("consultation_screen/{patientId}") { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId")?.toIntOrNull()
+            ConsultationScreen(
+                navController = navController,
+                patientId = patientId,
             )
         }
 
