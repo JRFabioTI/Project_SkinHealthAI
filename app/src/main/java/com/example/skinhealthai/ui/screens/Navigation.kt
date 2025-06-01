@@ -14,9 +14,6 @@ import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.utils.ImageStorage
 import com.example.skinhealthai.ui.theme.screens.HomeScreen
 import com.example.skinhealthai.viewmodel.LoginViewModel
-// Importe PatientViewModel e ConsultationViewModel se eles forem usados na AppNavigation
-import com.example.skinhealthai.ui.viewmodel.PatientViewModel
-import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
 
 
 object AppRoutes {
@@ -25,15 +22,16 @@ object AppRoutes {
     const val HOME = "home"
     const val PATIENT_LIST = "patient_list"
     const val PATIENT_HISTORY = "patient_history"
-    const val PATIENT_REGISTER = "patient_register" // Esta é a rota base
-    const val PATIENT_REGISTER_WITH_ID = "$PATIENT_REGISTER?patientId={patientId}"
+    const val PATIENT_REGISTER = "patient_register"
+    val PATIENT_REGISTER_WITH_ID = "$PATIENT_REGISTER?patientId={patientId}"
     const val PATIENT_RECORD_BASE = "patient_record"
-    const val PATIENT_RECORD_WITH_PATIENT_ID = "$PATIENT_RECORD_BASE/{patientId}"
+    val PATIENT_RECORD_WITH_PATIENT_ID = "$PATIENT_RECORD_BASE/{patientId}"
     const val IMAGE_GALLERY = "image_gallery"
     const val SCAN_IMAGE_BASE = "scan_image"
-    const val SCAN_IMAGE_WITH_INDEX = "$SCAN_IMAGE_BASE/{index}"
+    val SCAN_IMAGE_WITH_INDEX = "$SCAN_IMAGE_BASE/{index}"
     const val CONSULTATION_SCREEN_BASE = "consultation_screen"
     val CONSULTATION_SCREEN_WITH_PATIENT_ID = "$CONSULTATION_SCREEN_BASE/{patientId}"
+    val CONSULTATION_SCREEN_EDIT = "$CONSULTATION_SCREEN_BASE/{patientId}?consultationId={consultationId}"
 }
 
 @Composable
@@ -71,6 +69,27 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             ConsultationScreen(
                 navController = navController,
                 patientId = patientId,
+                consultationId = null
+            )
+        }
+
+        composable(
+            route = AppRoutes.CONSULTATION_SCREEN_EDIT,
+            arguments = listOf(
+                navArgument("patientId") { type = NavType.IntType },
+                navArgument("consultationId") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getInt("patientId")
+            val consultationId = backStackEntry.arguments?.getInt("consultationId")
+
+            ConsultationScreen(
+                navController = navController,
+                patientId = patientId,
+                consultationId = if (consultationId == -1) null else consultationId
             )
         }
 

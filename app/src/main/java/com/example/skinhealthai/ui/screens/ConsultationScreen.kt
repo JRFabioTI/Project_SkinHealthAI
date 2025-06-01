@@ -19,6 +19,8 @@ import com.example.skinhealthai.data.model.ConsultationRequest
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
 import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
 import com.example.skinhealthai.ui.viewmodel.ConsultationCreationState
+import com.example.skinhealthai.ui.viewmodel.SingleConsultationUiState
+import com.example.skinhealthai.ui.viewmodel.UpdateConsultationUiState
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -29,9 +31,11 @@ import java.util.Locale
 fun ConsultationScreen(
     navController: NavController,
     patientId: Int?,
+    consultationId: Int? = null,
     consultationViewModel: ConsultationViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val isEditing = consultationId != null
 
     var consultationDate by remember { mutableStateOf(SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())) }
     var photoLocationDescription by remember { mutableStateOf("") }
@@ -39,39 +43,84 @@ fun ConsultationScreen(
 
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val consultationCreationState by consultationViewModel.consultationCreationState.collectAsState()
+    val singleConsultationUiState by consultationViewModel.singleConsultationUiState.collectAsState()
+    val updateConsultationState by consultationViewModel.updateConsultationState.collectAsState()
 
-    LaunchedEffect(patientId) {
+    LaunchedEffect(patientId, consultationId) {
         if (patientId != null) {
             consultationViewModel.loadPatient(patientId)
         } else {
             Toast.makeText(context, "Erro: ID do paciente não fornecido.", Toast.LENGTH_SHORT).show()
             navController.popBackStack()
         }
+
+        if (isEditing && consultationId != null) {
+            consultationViewModel.loadSingleConsultation(consultationId)
+        }
     }
 
-    LaunchedEffect(consultationCreationState) {
+    LaunchedEffect(singleConsultationUiState) {
+        when (singleConsultationUiState) {
+            is SingleConsultationUiState.Loaded -> {
+                val consultation = (singleConsultationUiState as SingleConsultationUiState.Loaded).consultation
+                try {
+                    val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault())
+                    val displayFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                    val dateObject = apiDateTimeFormat.parse(consultation.dateConsultation)
+                    consultationDate = dateObject?.let { displayFormat.format(it) } ?: ""
+                } catch (e: Exception) {
+                    consultationDate = ""
+                    Toast.makeText(context, "Erro ao formatar data da consulta existente.", Toast.LENGTH_SHORT).show()
+                }
+                photoLocationDescription = consultation.photoLocation ?: ""
+                notes = consultation.notes ?: ""
+                consultationViewModel.resetSingleConsultationState()
+            }
+            is SingleConsultationUiState.Error -> {
+                Toast.makeText(context, (singleConsultationUiState as SingleConsultationUiState.Error).message, Toast.LENGTH_LONG).show()
+                consultationViewModel.resetSingleConsultationState()
+                navController.popBackStack()
+            }
+            else -> { /* Loading ou Idle, não fazer nada */ }
+        }
+    }
+
+    LaunchedEffect(consultationCreationState, updateConsultationState) {
         when (consultationCreationState) {
             is ConsultationCreationState.Success -> {
                 Toast.makeText(context, "Consulta registrada com sucesso!", Toast.LENGTH_SHORT).show()
-                consultationDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                photoLocationDescription = ""
-                notes = ""
-                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}")
                 consultationViewModel.resetConsultationCreationState()
+                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
+                    popUpTo("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") { inclusive = true }
+                }
             }
             is ConsultationCreationState.Error -> {
                 Toast.makeText(context, (consultationCreationState as ConsultationCreationState.Error).message, Toast.LENGTH_LONG).show()
                 consultationViewModel.resetConsultationCreationState()
             }
-            ConsultationCreationState.Idle, ConsultationCreationState.Loading -> {
+            else -> { /* Idle ou Loading */ }
+        }
+
+        when (updateConsultationState) {
+            is UpdateConsultationUiState.Success -> {
+                Toast.makeText(context, "Consulta atualizada com sucesso!", Toast.LENGTH_SHORT).show()
+                consultationViewModel.resetUpdateConsultationState()
+                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
+                    popUpTo("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") { inclusive = true }
+                }
             }
+            is UpdateConsultationUiState.Error -> {
+                Toast.makeText(context, (updateConsultationState as UpdateConsultationUiState.Error).message, Toast.LENGTH_LONG).show()
+                consultationViewModel.resetUpdateConsultationState()
+            }
+            else -> { /* Idle ou Loading */ }
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrar Nova Consulta", fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEditing) "Editar Consulta" else "Registrar Nova Consulta", fontWeight = FontWeight.Bold) }, // Título dinâmico
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
@@ -131,7 +180,7 @@ fun ConsultationScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Dados da Consulta",
+                        text = if (isEditing) "Dados para Edição" else "Dados da Consulta", // Título dinâmico
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -195,17 +244,26 @@ fun ConsultationScreen(
                                 photoLocation = photoLocationDescription.takeIf { it.isNotBlank() },
                                 notes = notes.takeIf { it.isNotBlank() }
                             )
-                            consultationViewModel.createConsultation(consultationRequest)
+
+                            if (isEditing && consultationId != null) {
+                                consultationViewModel.updateConsultation(consultationId, consultationRequest)
+                            } else {
+                                consultationViewModel.createConsultation(consultationRequest)
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth(0.5f)
                             .align(Alignment.CenterHorizontally),
-                        enabled = consultationCreationState !is ConsultationCreationState.Loading
+                        enabled = (consultationCreationState !is ConsultationCreationState.Loading &&
+                                updateConsultationState !is UpdateConsultationUiState.Loading &&
+                                singleConsultationUiState !is SingleConsultationUiState.Loading)
                     ) {
-                        if (consultationCreationState is ConsultationCreationState.Loading) {
+                        if (consultationCreationState is ConsultationCreationState.Loading ||
+                            updateConsultationState is UpdateConsultationUiState.Loading ||
+                            singleConsultationUiState is SingleConsultationUiState.Loading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else {
-                            Text("Salvar")
+                            Text(if (isEditing) "Atualizar" else "Salvar")
                         }
                     }
                 }

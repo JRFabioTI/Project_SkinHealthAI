@@ -1,15 +1,14 @@
 package com.example.skinhealthai.ui.screens
 
-import android.net.Uri
-import android.widget.Toast // Importar Toast
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete // Importar ícone de exclusão
-import androidx.compose.material.icons.filled.Edit // Importar ícone de edição
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,21 +20,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext // Importar LocalContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
-import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
-import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
-import com.example.skinhealthai.ui.viewmodel.PatientConsultationsUiState
 import com.example.skinhealthai.data.model.ConsultationResponse
-import com.example.skinhealthai.ui.viewmodel.DeleteConsultationUiState // --- IMPORT AQUI ---
+import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
+import com.example.skinhealthai.ui.viewmodel.DeleteConsultationUiState
+import com.example.skinhealthai.ui.viewmodel.PatientConsultationsUiState
+import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.text.ParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,11 +47,12 @@ fun PatientRecordScreen(
 
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val patientConsultationsUiState by consultationViewModel.patientConsultationsUiState.collectAsState()
-    val deleteConsultationState by consultationViewModel.deleteConsultationState.collectAsState() // --- OBSERVAR ESTADO ---
+    val deleteConsultationState by consultationViewModel.deleteConsultationState.collectAsState()
 
-    // Estados para o diálogo de confirmação de exclusão
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var consultationToDelete by remember { mutableStateOf<ConsultationResponse?>(null) }
+
+    var filterText by remember { mutableStateOf("") }
 
 
     LaunchedEffect(patientId) {
@@ -62,19 +62,17 @@ fun PatientRecordScreen(
         }
     }
 
-    // Observar o estado de exclusão de consulta para exibir Toast e recarregar
-    LaunchedEffect(deleteConsultationState) { // --- USAR deleteConsultationState ---
+    LaunchedEffect(deleteConsultationState) {
         when (deleteConsultationState) {
-            is DeleteConsultationUiState.Success -> { // --- USAR DeleteConsultationUiState ---
+            is DeleteConsultationUiState.Success -> {
                 Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
-                consultationViewModel.resetDeleteConsultationState() // --- CHAMADA CORRETA ---
-                // Recarrega as consultas do paciente para atualizar a lista no prontuário
-                patientId?.let { consultationViewModel.loadPatientConsultations(it) }
+                consultationViewModel.resetDeleteConsultationState()
+                patientId?.let { consultationViewModel.loadPatientConsultations(it) } // Recarrega após exclusão
             }
-            is DeleteConsultationUiState.Error -> { // --- USAR DeleteConsultationUiState ---
-                val errorMessage = (deleteConsultationState as DeleteConsultationUiState.Error).message // --- USAR DeleteConsultationUiState ---
+            is DeleteConsultationUiState.Error -> {
+                val errorMessage = (deleteConsultationState as DeleteConsultationUiState.Error).message
                 Toast.makeText(context, "Erro ao excluir consulta: $errorMessage", Toast.LENGTH_LONG).show()
-                consultationViewModel.resetDeleteConsultationState() // --- CHAMADA CORRETA ---
+                consultationViewModel.resetDeleteConsultationState()
             }
             else -> { /* Não fazer nada para Idle ou Loading */ }
         }
@@ -91,8 +89,12 @@ fun PatientRecordScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    IconButton(onClick = {
+                        navController.navigate(AppRoutes.HOME) {
+                            popUpTo(AppRoutes.HOME) { inclusive = true } // Limpa a pilha até a Home
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar para Home")
                     }
                 }
             )
@@ -178,6 +180,15 @@ fun PatientRecordScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    OutlinedTextField(
+                        value = filterText,
+                        onValueChange = { filterText = it },
+                        label = { Text("Filtrar por Data (dd/MM/yyyy) ou Local da Lesão") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
 
                     when (patientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
@@ -185,19 +196,53 @@ fun PatientRecordScreen(
                             Text("Carregando histórico de consultas...", modifier = Modifier.align(Alignment.CenterHorizontally))
                         }
                         is PatientConsultationsUiState.Loaded -> {
-                            val consultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
+                            val allConsultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
 
-                            if (consultations.isEmpty()) {
-                                Text(text = "Nenhuma consulta registrada para este paciente.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            } else {
-                                val sortedConsultations = consultations.sortedByDescending {
-                                    try {
-                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0)
-                                    } catch (e: Exception) {
-                                        Date(0)
+                            val filteredConsultations = remember(filterText, allConsultations) {
+                                if (filterText.isBlank()) {
+                                    allConsultations
+                                } else {
+                                    val lowerCaseFilter = filterText.lowercase()
+                                    allConsultations.filter { consultation ->
+                                        val consultationDateString = try {
+                                            val apiFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault())
+                                            val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                                            apiFormat.parse(consultation.dateConsultation)?.let { displayFormat.format(it) }
+                                        } catch (e: Exception) { null }
+                                        val matchesDate = consultationDateString?.lowercase()?.contains(lowerCaseFilter) ?: false
+
+                                        val matchesLocation = consultation.photoLocation?.lowercase()?.contains(lowerCaseFilter) ?: false
+
+                                        val matchesNotes = consultation.notes?.lowercase()?.contains(lowerCaseFilter) ?: false
+
+                                        matchesDate || matchesLocation || matchesNotes
                                     }
                                 }
+                            }
 
+                            val sortedConsultations = filteredConsultations.sortedByDescending {
+                                try {
+                                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0)
+                                } catch (e: Exception) {
+                                    Date(0)
+                                }
+                            }
+
+                            if (sortedConsultations.isEmpty() && filterText.isNotBlank()) {
+                                Text(
+                                    text = "Nenhuma consulta encontrada com o filtro: \"$filterText\".",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            } else if (sortedConsultations.isEmpty()) {
+                                Text(
+                                    text = "Nenhuma consulta registrada para este paciente.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            } else {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     sortedConsultations.forEach { consultation ->
                                         Card(
@@ -223,35 +268,30 @@ fun PatientRecordScreen(
                                                         text = "Data da Consulta: ${formattedConsultationDate ?: "Não informada"}",
                                                         style = MaterialTheme.typography.titleMedium,
                                                         fontWeight = FontWeight.SemiBold,
-                                                        modifier = Modifier.weight(1f) // Permite que o texto ocupe espaço
+                                                        modifier = Modifier.weight(1f)
                                                     )
-                                                    // --- ÍCONES DE AÇÃO ---
                                                     Row(horizontalArrangement = Arrangement.End) {
                                                         IconButton(
                                                             onClick = {
-                                                                // Lógica de Edição da Consulta
                                                                 consultation.id?.let { consId ->
-                                                                    // Navega para a tela de consulta para edição
-                                                                    // Você pode adaptar ConsultationScreen para edição ou criar uma nova tela EditConsultationScreen
-                                                                    // Exemplo: navController.navigate("edit_consultation_screen/${consId}")
-                                                                    Toast.makeText(context, "Editar consulta ${consId}", Toast.LENGTH_SHORT).show()
-                                                                }
+                                                                    patientId?.let { pId ->
+                                                                        navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${pId}?consultationId=${consId}")
+                                                                    } ?: Toast.makeText(context, "Erro: ID do paciente não disponível para edição.", Toast.LENGTH_SHORT).show()
+                                                                } ?: Toast.makeText(context, "Erro: ID da consulta não disponível para edição.", Toast.LENGTH_SHORT).show()
                                                             }
                                                         ) {
                                                             Icon(Icons.Default.Edit, contentDescription = "Editar Consulta")
                                                         }
                                                         IconButton(
                                                             onClick = {
-                                                                // Lógica de Exclusão da Consulta
-                                                                consultationToDelete = consultation // Armazena a consulta para exclusão
-                                                                showDeleteConfirmationDialog = true // Mostra o diálogo
+                                                                consultationToDelete = consultation
+                                                                showDeleteConfirmationDialog = true
                                                             }
                                                         ) {
                                                             Icon(Icons.Default.Delete, contentDescription = "Excluir Consulta")
                                                         }
                                                     }
-                                                    // --- FIM ÍCONES DE AÇÃO ---
-                                                } // Fim da Row para data e ícones
+                                                }
 
                                                 consultation.notes?.let { notes ->
                                                     Text(
@@ -312,7 +352,6 @@ fun PatientRecordScreen(
         }
     }
 
-    // --- DIÁLOGO DE CONFIRMAÇÃO DE EXCLUSÃO DE CONSULTA ---
     if (showDeleteConfirmationDialog && consultationToDelete != null) {
         AlertDialog(
             onDismissRequest = {
@@ -331,7 +370,7 @@ fun PatientRecordScreen(
                 TextButton(
                     onClick = {
                         consultationToDelete?.id?.let { consId ->
-                            consultationViewModel.deleteConsultation(consId) // Chama o ViewModel para excluir a consulta
+                            consultationViewModel.deleteConsultation(consId)
                         }
                         showDeleteConfirmationDialog = false
                         consultationToDelete = null
@@ -352,5 +391,4 @@ fun PatientRecordScreen(
             }
         )
     }
-    // --- FIM DIÁLOGO ---
 }
