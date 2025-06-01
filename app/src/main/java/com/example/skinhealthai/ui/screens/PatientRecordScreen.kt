@@ -34,19 +34,17 @@ import java.text.ParseException // Importe para lidar com erros de parsing de da
 fun PatientRecordScreen(
     navController: NavController,
     patientId: Int?,
-    consultationId: Int? = null, // *** NOVO PARÂMETRO: ID da consulta específica ***
-    consultationViewModel: ConsultationViewModel = viewModel() // Injete o ViewModel
+    consultationId: Int? = null,
+    consultationViewModel: ConsultationViewModel = viewModel()
 ) {
 
-    // Observe os estados do ViewModel para os dados do paciente e histórico de consultas
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val patientConsultationsUiState by consultationViewModel.patientConsultationsUiState.collectAsState()
 
-    // Acionar o carregamento dos dados do paciente e suas consultas quando a tela é iniciada
     LaunchedEffect(patientId) {
         if (patientId != null) {
             consultationViewModel.loadPatient(patientId)
-            consultationViewModel.loadPatientConsultations(patientId) // Carrega todas as consultas do paciente
+            consultationViewModel.loadPatientConsultations(patientId)
         }
     }
 
@@ -72,10 +70,9 @@ fun PatientRecordScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()), // Adicionado para permitir scroll em conteúdo longo
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Exibir informações do paciente com base no estado do ViewModel
             when (patientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -104,14 +101,15 @@ fun PatientRecordScreen(
                     // Formata e exibe a data de nascimento do paciente
                     patient.date_of_birth?.let { apiDateString ->
                         val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                        val apiFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) // Formato que a API retorna
+                        // *** CORREÇÃO AQUI para apiFormat da data de nascimento ***
+                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
                         val formattedDate = try {
                             apiFormat.parse(apiDateString)?.let { dateObject ->
                                 displayFormat.format(dateObject)
                             }
                         } catch (e: ParseException) {
-                            null // Retorna null se não conseguir parsear
+                            null
                         } catch (e: Exception) {
                             null
                         }
@@ -135,7 +133,7 @@ fun PatientRecordScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    patient.cellphone?.let { // Assumindo que o campo é 'phone' no PatientResponse
+                    patient.cellphone?.let {
                         Text(
                             text = "Telefone: $it",
                             style = MaterialTheme.typography.bodyLarge
@@ -143,9 +141,8 @@ fun PatientRecordScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Dados da Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) // Alterado de "Dados da Última Consulta"
+                    Text("Dados da Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                    // Exibir os dados da consulta, seja a selecionada ou a mais recente
                     when (patientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -154,15 +151,12 @@ fun PatientRecordScreen(
                         is PatientConsultationsUiState.Loaded -> {
                             val consultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
 
-                            // *** LÓGICA DE SELEÇÃO DA CONSULTA ***
                             val consultationToDisplay: ConsultationResponse? = if (consultationId != null) {
-                                // Se um consultationId foi fornecido, tente encontrar essa consulta
                                 consultations.firstOrNull { it.id == consultationId }
                             } else {
-                                // Caso contrário (ou se a consulta específica não for encontrada), mostre a mais recente
                                 consultations.maxByOrNull {
                                     try {
-                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0)
+                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0) // Usar X para Z
                                     } catch (e: Exception) {
                                         Date(0)
                                     }
@@ -170,9 +164,9 @@ fun PatientRecordScreen(
                             }
 
                             if (consultationToDisplay != null) {
-                                // Formata a data da consulta para exibição
                                 val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                                val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                                // *** CORREÇÃO AQUI para apiDateTimeFormat da data da consulta ***
+                                val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()) // Adicionado 'X' para o fuso horário Z
 
                                 val formattedConsultationDate = try {
                                     apiDateTimeFormat.parse(consultationToDisplay.dateConsultation)?.let { dateObject ->
