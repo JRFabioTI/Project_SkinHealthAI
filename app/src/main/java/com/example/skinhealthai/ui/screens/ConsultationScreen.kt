@@ -56,9 +56,9 @@ fun ConsultationScreen(
                 consultationDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
                 photoLocationDescription = ""
                 notes = ""
-                // --- CORREÇÃO AQUI: Navegação para a rota unificada do prontuário ---
-                // Passamos apenas o patientId, o consultationId será nulo por padrão na PatientRecordScreen
-                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}?patientId=${patientId}")
+                // --- CORREÇÃO AQUI: Navegação para a rota do prontuário com patientId como path parameter ---
+                // Não use 'val' ou '{patientId}' aqui, apenas a base e o ID real.
+                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}")
                 consultationViewModel.resetConsultationCreationState()
             }
             is ConsultationCreationState.Error -> {
