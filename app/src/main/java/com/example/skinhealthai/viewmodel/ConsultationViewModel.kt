@@ -47,6 +47,14 @@ sealed class UpdateConsultationUiState {
     data class Error(val message: String) : UpdateConsultationUiState()
 }
 
+// --- NOVO: Sealed class para o estado de exclusão de consulta (se não estiver já definido) ---
+sealed class DeleteConsultationUiState {
+    object Idle : DeleteConsultationUiState()
+    object Loading : DeleteConsultationUiState()
+    object Success : DeleteConsultationUiState()
+    data class Error(val message: String) : DeleteConsultationUiState()
+}
+// --- FIM NOVO ---
 
 class ConsultationViewModel(
     private val patientRepository: PatientRepository = PatientRepository(),
@@ -67,6 +75,11 @@ class ConsultationViewModel(
 
     private val _updateConsultationState = MutableStateFlow<UpdateConsultationUiState>(UpdateConsultationUiState.Idle)
     val updateConsultationState: StateFlow<UpdateConsultationUiState> = _updateConsultationState.asStateFlow()
+
+    // --- NOVO: Estado para exclusão de consulta ---
+    private val _deleteConsultationState = MutableStateFlow<DeleteConsultationUiState>(DeleteConsultationUiState.Idle)
+    val deleteConsultationState: StateFlow<DeleteConsultationUiState> = _deleteConsultationState.asStateFlow()
+    // --- FIM NOVO ---
 
 
     fun loadPatient(patientId: Int) {
@@ -155,6 +168,26 @@ class ConsultationViewModel(
         }
     }
 
+    // --- NOVO: Método para excluir consulta ---
+    fun deleteConsultation(consultationId: Int) {
+        viewModelScope.launch {
+            _deleteConsultationState.value = DeleteConsultationUiState.Loading
+            try {
+                val response = consultationRepository.deleteConsultation(consultationId)
+                if (response.isSuccessful) {
+                    _deleteConsultationState.value = DeleteConsultationUiState.Success
+                    // Não chame loadPatientConsultations() aqui, pois o LaunchedEffect na tela já fará isso após o sucesso.
+                } else {
+                    val message = response.errorBody()?.string() ?: "Erro desconhecido ao excluir consulta."
+                    _deleteConsultationState.value = DeleteConsultationUiState.Error(message)
+                }
+            } catch (e: Exception) {
+                _deleteConsultationState.value = DeleteConsultationUiState.Error(e.message ?: "Falha na conexão ao excluir consulta.")
+            }
+        }
+    }
+    // --- FIM NOVO ---
+
     fun resetConsultationCreationState() {
         _consultationCreationState.value = ConsultationCreationState.Idle
     }
@@ -166,4 +199,10 @@ class ConsultationViewModel(
     fun resetUpdateConsultationState() {
         _updateConsultationState.value = UpdateConsultationUiState.Idle
     }
+
+    // --- NOVO: Método para resetar o estado de exclusão de consulta ---
+    fun resetDeleteConsultationState() {
+        _deleteConsultationState.value = DeleteConsultationUiState.Idle
+    }
+    // --- FIM NOVO ---
 }
