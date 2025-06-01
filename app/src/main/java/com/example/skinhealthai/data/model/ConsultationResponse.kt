@@ -3,25 +3,17 @@ package com.example.skinhealthai.data.model
 
 import com.google.gson.annotations.SerializedName
 
-// Certifique-se de que PatientResponse esteja importado e definido em algum lugar
-// Exemplo (se não estiver no mesmo arquivo):
-// import com.example.skinhealthai.data.model.PatientResponse
 
 data class ConsultationResponse(
     val id: Int,
     @SerializedName("agent")
-    val agentId: Int, // ID do agente
+    val agentId: Int,
     @SerializedName("patient")
-    val patientId: Int, // ID do paciente
-
-    // NOVO: Mapeie o patient_details que vem do seu Django ConsultationSerializer
+    val patientId: Int,
     @SerializedName("patient_details")
-    val patientDetails: PatientResponse?, // <-- Adicione este campo
-    // Torne-o anulável (PatientResponse?) caso a API possa não enviá-lo
-    // ou se você não tiver certeza
-
+    val patientDetails: PatientResponse?,
     @SerializedName("date_consultation")
-    val dateConsultation: String, // Data e hora da consulta, String ISO 8601
+    val dateConsultation: String,
     @SerializedName("photo_location")
     val photoLocation: String?,
     val notes: String?,

@@ -9,18 +9,16 @@ import com.example.skinhealthai.repository.PatientRepository
 import com.example.skinhealthai.repository.ConsultationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow // Importe este para asStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Estados para a UI da tela de consulta (carregamento do paciente)
 sealed class PatientDataUiState {
     object Loading : PatientDataUiState()
     data class PatientLoaded(val patient: PatientResponse) : PatientDataUiState()
     data class Error(val message: String) : PatientDataUiState()
-    object Idle : PatientDataUiState() // Adicione o estado Idle aqui também
+    object Idle : PatientDataUiState()
 }
 
-// Estados para a operação de criação de consulta
 sealed class ConsultationCreationState {
     object Idle : ConsultationCreationState()
     object Loading : ConsultationCreationState()
@@ -28,7 +26,6 @@ sealed class ConsultationCreationState {
     data class Error(val message: String) : ConsultationCreationState()
 }
 
-// Estados para o carregamento do histórico de consultas de um paciente
 sealed class PatientConsultationsUiState {
     object Loading : PatientConsultationsUiState()
     data class Loaded(val consultations: List<ConsultationResponse>) : PatientConsultationsUiState()
@@ -36,7 +33,6 @@ sealed class PatientConsultationsUiState {
     object Idle : PatientConsultationsUiState()
 }
 
-// NOVO: Estados para a UI de uma ÚNICA consulta (para edição)
 sealed class SingleConsultationUiState {
     object Idle : SingleConsultationUiState()
     object Loading : SingleConsultationUiState()
@@ -44,7 +40,6 @@ sealed class SingleConsultationUiState {
     data class Error(val message: String) : SingleConsultationUiState()
 }
 
-// NOVO: Estados para a operação de ATUALIZAÇÃO de consulta
 sealed class UpdateConsultationUiState {
     object Idle : UpdateConsultationUiState()
     object Loading : UpdateConsultationUiState()
@@ -58,20 +53,18 @@ class ConsultationViewModel(
     private val consultationRepository: ConsultationRepository = ConsultationRepository()
 ) : ViewModel() {
 
-    private val _patientDataUiState = MutableStateFlow<PatientDataUiState>(PatientDataUiState.Idle) // Alterado para Idle como start
-    val patientDataUiState: StateFlow<PatientDataUiState> = _patientDataUiState.asStateFlow() // Use asStateFlow
+    private val _patientDataUiState = MutableStateFlow<PatientDataUiState>(PatientDataUiState.Idle)
+    val patientDataUiState: StateFlow<PatientDataUiState> = _patientDataUiState.asStateFlow()
 
     private val _consultationCreationState = MutableStateFlow<ConsultationCreationState>(ConsultationCreationState.Idle)
-    val consultationCreationState: StateFlow<ConsultationCreationState> = _consultationCreationState.asStateFlow() // Use asStateFlow
+    val consultationCreationState: StateFlow<ConsultationCreationState> = _consultationCreationState.asStateFlow()
 
     private val _patientConsultationsUiState = MutableStateFlow<PatientConsultationsUiState>(PatientConsultationsUiState.Idle)
-    val patientConsultationsUiState: StateFlow<PatientConsultationsUiState> = _patientConsultationsUiState.asStateFlow() // Use asStateFlow
+    val patientConsultationsUiState: StateFlow<PatientConsultationsUiState> = _patientConsultationsUiState.asStateFlow()
 
-    // NOVO: StateFlow para a consulta que está sendo editada/visualizada individualmente
     private val _singleConsultationUiState = MutableStateFlow<SingleConsultationUiState>(SingleConsultationUiState.Idle)
     val singleConsultationUiState: StateFlow<SingleConsultationUiState> = _singleConsultationUiState.asStateFlow()
 
-    // NOVO: StateFlow para o estado da operação de atualização da consulta
     private val _updateConsultationState = MutableStateFlow<UpdateConsultationUiState>(UpdateConsultationUiState.Idle)
     val updateConsultationState: StateFlow<UpdateConsultationUiState> = _updateConsultationState.asStateFlow()
 
@@ -100,8 +93,7 @@ class ConsultationViewModel(
                 val response = consultationRepository.createConsultation(consultationRequest)
                 if (response.isSuccessful && response.body() != null) {
                     _consultationCreationState.value = ConsultationCreationState.Success
-                    // Se a consulta for criada com sucesso, recarregue as consultas do paciente
-                    loadPatientConsultations(consultationRequest.patientId) // Use consultationRequest.patient
+                    loadPatientConsultations(consultationRequest.patientId)
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao registrar consulta."
                     _consultationCreationState.value = ConsultationCreationState.Error(message)
@@ -129,12 +121,11 @@ class ConsultationViewModel(
         }
     }
 
-    // NOVO: Função para carregar uma consulta específica para edição
     fun loadSingleConsultation(consultationId: Int) {
         viewModelScope.launch {
             _singleConsultationUiState.value = SingleConsultationUiState.Loading
             try {
-                val response = consultationRepository.getConsultationById(consultationId) // <-- CORREÇÃO AQUI // Usando getConsultation por ID
+                val response = consultationRepository.getConsultationById(consultationId)
                 if (response.isSuccessful && response.body() != null) {
                     _singleConsultationUiState.value = SingleConsultationUiState.Loaded(response.body()!!)
                 } else {
@@ -147,16 +138,13 @@ class ConsultationViewModel(
         }
     }
 
-    // NOVO: Função para atualizar uma consulta
     fun updateConsultation(consultationId: Int, consultationRequest: ConsultationRequest) {
         viewModelScope.launch {
             _updateConsultationState.value = UpdateConsultationUiState.Loading
             try {
                 val response = consultationRepository.updateConsultation(consultationId, consultationRequest)
-                if (response.isSuccessful) { // updateConsultation pode retornar Response<ConsultationResponse> ou Response<Unit>
+                if (response.isSuccessful) {
                     _updateConsultationState.value = UpdateConsultationUiState.Success
-                    // Opcional: Recarregar a lista de consultas do paciente se necessário
-                    // ou apenas resetar o estado e o usuário voltará para a tela anterior
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido ao atualizar consulta."
                     _updateConsultationState.value = UpdateConsultationUiState.Error(message)
@@ -171,12 +159,10 @@ class ConsultationViewModel(
         _consultationCreationState.value = ConsultationCreationState.Idle
     }
 
-    // NOVO: Função para resetar o estado da consulta individual
     fun resetSingleConsultationState() {
         _singleConsultationUiState.value = SingleConsultationUiState.Idle
     }
 
-    // NOVO: Função para resetar o estado de atualização
     fun resetUpdateConsultationState() {
         _updateConsultationState.value = UpdateConsultationUiState.Idle
     }

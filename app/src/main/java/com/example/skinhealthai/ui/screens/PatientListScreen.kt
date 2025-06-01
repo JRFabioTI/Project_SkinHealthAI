@@ -45,10 +45,6 @@ import androidx.compose.runtime.collectAsState
 import com.example.skinhealthai.ui.viewmodel.DeletePatientUiState
 import com.example.skinhealthai.ui.viewmodel.PatientViewModel
 
-// Note: A classe AppRoutes deve estar em um arquivo separado, por exemplo, AppNavigation.kt
-// ou na sua MainActivity, se for o caso. Não a redeclara aqui.
-// Assumindo que AppRoutes está acessível, caso contrário adicione o import necessário.
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientListScreen(
@@ -141,8 +137,6 @@ fun PatientListScreen(
                         PatientListItem(
                             patient = patient,
                             onClick = {
-                                // Navega para a tela de consulta
-                                // Certifique-se que CONSULTATION_SCREEN_WITH_PATIENT_ID está definida corretamente em AppRoutes
                                 navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${patient.id}")
                             },
                             onDeleteClick = { clickedPatient ->
@@ -150,8 +144,6 @@ fun PatientListScreen(
                                 showDeleteConfirmationDialog = true
                             },
                             onEditClick = { patientId ->
-                                // AQUI ESTÁ A CORREÇÃO CRÍTICA PARA A NAVEGAÇÃO DE EDIÇÃO
-                                // Use a rota exata definida em AppRoutes
                                 navController.navigate("${AppRoutes.PATIENT_REGISTER_BASE}?patientId=${patientId}")
                             }
                         )
@@ -261,7 +253,7 @@ fun PatientListItem(
                     }
 
                     IconButton(onClick = {
-                        patient.id?.let { onEditClick(it) }
+                        onEditClick(patient.id)
                         showActions = false
                     }) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar paciente")

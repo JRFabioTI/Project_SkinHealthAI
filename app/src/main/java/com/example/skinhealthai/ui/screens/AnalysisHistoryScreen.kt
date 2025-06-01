@@ -10,33 +10,31 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete // Importar
-import androidx.compose.material.icons.filled.Edit // Importar
-import androidx.compose.material.icons.filled.MoreVert // Importar
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf // Importar
-import androidx.compose.runtime.remember // Importar
-import androidx.compose.runtime.setValue // Importar
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext // Importar
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-
 import com.example.skinhealthai.data.model.ConsultationResponse
 import com.example.skinhealthai.viewmodel.AnalysisHistoryUiState
 import com.example.skinhealthai.viewmodel.AnalysisHistoryViewModel
-import com.example.skinhealthai.viewmodel.DeleteConsultationUiState // Importar
+import com.example.skinhealthai.viewmodel.DeleteConsultationUiState
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.text.ParseException
-import com.example.skinhealthai.ui.screens.AppRoutes // Importar AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,19 +44,16 @@ fun AnalysisHistoryScreen(
 ) {
     val context = LocalContext.current
     val analysisHistoryState by analysisHistoryViewModel.analysisHistoryState.collectAsState()
-    val deleteConsultationState by analysisHistoryViewModel.deleteConsultationState.collectAsState() // Observe o estado de exclusão
+    val deleteConsultationState by analysisHistoryViewModel.deleteConsultationState.collectAsState()
 
-    // Estados para o diálogo de confirmação de exclusão
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var consultationToDelete by remember { mutableStateOf<ConsultationResponse?>(null) }
 
-
-    // Observar o estado de exclusão para exibir mensagens de Toast
     LaunchedEffect(deleteConsultationState) {
         when (deleteConsultationState) {
             is DeleteConsultationUiState.Success -> {
                 Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
-                analysisHistoryViewModel.resetDeleteConsultationState() // Resetar o estado
+                analysisHistoryViewModel.resetDeleteConsultationState()
             }
             is DeleteConsultationUiState.Error -> {
                 val errorMessage = (deleteConsultationState as DeleteConsultationUiState.Error).message
@@ -112,30 +107,23 @@ fun AnalysisHistoryScreen(
                             AnalysisHistoryListItem(
                                 consultation = consultation,
                                 onClick = {
-                                    // *** CORREÇÃO AQUI: Passar patientId E consultationId ***
                                     consultation.patientDetails?.id?.let { patientId ->
                                         consultation.id?.let { consultationId ->
-                                            // Navegar para o prontuário com o ID do paciente e o ID da consulta
                                             navController.navigate(
                                                 "${AppRoutes.PATIENT_RECORD_BASE}/${patientId}?consultationId=${consultationId}"
                                             )
-                                        } ?: run {
-                                            // Caso o consultation.id seja nulo, ainda navega para o prontuário do paciente (mostrará a última consulta)
-                                            Toast.makeText(context, "ID da consulta não encontrado para esta entrada.", Toast.LENGTH_SHORT).show()
-                                            navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}")
                                         }
                                     } ?: run {
                                         Toast.makeText(context, "ID do paciente não encontrado para esta entrada.", Toast.LENGTH_SHORT).show()
                                     }
                                 },
-                                onDeleteClick = { clickedConsultation -> // Passa o objeto completo
+                                onDeleteClick = { clickedConsultation ->
                                     consultationToDelete = clickedConsultation
                                     showDeleteConfirmationDialog = true
                                 },
                                 onEditClick = { consultationId ->
                                     // TODO: Implementar navegação para tela de edição de consulta
                                     Toast.makeText(context, "Editar consulta ${consultationId}", Toast.LENGTH_SHORT).show()
-                                    // Exemplo: navController.navigate("edit_consultation_screen/${consultationId}")
                                 }
                             )
                             Divider()
@@ -161,7 +149,6 @@ fun AnalysisHistoryScreen(
         }
     }
 
-    // Diálogo de Confirmação de Exclusão de Consulta
     if (showDeleteConfirmationDialog && consultationToDelete != null) {
         AlertDialog(
             onDismissRequest = {
@@ -202,15 +189,14 @@ fun AnalysisHistoryScreen(
     }
 }
 
-// O resto do AnalysisHistoryListItem está bom.
 @Composable
 fun AnalysisHistoryListItem(
-    consultation: ConsultationResponse, // Recebe ConsultationResponse
+    consultation: ConsultationResponse,
     onClick: () -> Unit,
-    onDeleteClick: (ConsultationResponse) -> Unit, // Callback para exclusão
-    onEditClick: (Int) -> Unit // Callback para edição
+    onDeleteClick: (ConsultationResponse) -> Unit,
+    onEditClick: (Int) -> Unit
 ) {
-    var showActions by remember { mutableStateOf(false) } // Estado para mostrar/esconder ações
+    var showActions by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -218,9 +204,9 @@ fun AnalysisHistoryListItem(
             .clickable { onClick() }
             .padding(vertical = 12.dp, horizontal = 0.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween // Alinha conteúdo e botões
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) { // Ocupa o máximo de espaço possível
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Paciente: ${consultation.patientDetails?.name ?: "Desconhecido"}",
                 style = MaterialTheme.typography.titleMedium,
@@ -252,32 +238,27 @@ fun AnalysisHistoryListItem(
             }
         }
 
-        // Ícones de Ação
         Row {
-            // Ícone de três pontos para exibir/esconder as ações
             IconButton(onClick = { showActions = !showActions }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Mais opções")
             }
 
-            // Ações de Lixeira e Lápis, visíveis condicionalmente
             AnimatedVisibility(
                 visible = showActions,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 Row {
-                    // Ícone de Lixeira para excluir
                     IconButton(onClick = {
-                        onDeleteClick(consultation) // Passa o objeto ConsultationResponse completo
-                        showActions = false // Esconde os ícones após a ação
+                        onDeleteClick(consultation)
+                        showActions = false
                     }) {
                         Icon(Icons.Default.Delete, contentDescription = "Excluir consulta")
                     }
 
-                    // Ícone de Lápis para editar
                     IconButton(onClick = {
-                        consultation.id?.let { onEditClick(it) } // Passa o ID da consulta
-                        showActions = false // Esconde os ícones após a ação
+                        consultation.id?.let { onEditClick(it) }
+                        showActions = false
                     }) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar consulta")
                     }

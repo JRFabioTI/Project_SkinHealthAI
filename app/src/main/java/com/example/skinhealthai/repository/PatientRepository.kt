@@ -1,9 +1,7 @@
 package com.example.skinhealthai.repository
 
-import com.example.skinhealthai.data.model.Patient
 import com.example.skinhealthai.data.model.PatientRequest
 import com.example.skinhealthai.data.model.PatientResponse
-import com.example.skinhealthai.data.network.ApiService
 import com.example.skinhealthai.data.network.RetrofitInstance
 import retrofit2.Response
 

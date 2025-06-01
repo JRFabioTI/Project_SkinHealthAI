@@ -6,7 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // Importe tudo de runtime, incluindo mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,28 +31,24 @@ fun PatientRegisterScreen(
     val context = LocalContext.current
 
     var name by remember { mutableStateOf("") }
-    var birthDate by remember { mutableStateOf("") } // Data no formato de exibição (dd/MM/yyyy)
+    var birthDate by remember { mutableStateOf("") }
     var genderExpanded by remember { mutableStateOf(false) }
-    var selectedGender by remember { mutableStateOf<String?>(null) } // Guarda a string de exibição ("Masculino")
+    var selectedGender by remember { mutableStateOf<String?>(null) }
     var phone by remember { mutableStateOf("") }
     var cpf by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
 
     var nameError by remember { mutableStateOf(false) }
-    var birthDateError by remember { mutableStateOf(false) } // CORRIGIDO: mutableStateOf
+    var birthDateError by remember { mutableStateOf(false) }
     var genderError by remember { mutableStateOf(false) }
     var cpfError by remember { mutableStateOf(false) }
 
-    val genderOptions = listOf("Masculino", "Feminino", "Outro") // Opções para o dropdown
-
+    val genderOptions = listOf("Masculino", "Feminino", "Outro")
     val registerState by viewModel.registerState.collectAsState()
     val selectedPatientState by viewModel.selectedPatient.collectAsState()
-
     val isEditing = patientId != null
 
-    // LaunchedEffect para carregar os dados do paciente se estiver em modo de edição
     LaunchedEffect(patientId) {
-        // Limpar campos e erros sempre que o patientId mudar (novo ou diferente paciente)
         name = ""
         birthDate = ""
         selectedGender = null
@@ -63,53 +59,46 @@ fun PatientRegisterScreen(
         birthDateError = false
         genderError = false
         cpfError = false
-        viewModel.resetSelectedPatientState() // Resetar estado do ViewModel também
+        viewModel.resetSelectedPatientState()
 
         if (isEditing && patientId != null) {
             viewModel.fetchPatientById(patientId)
         }
     }
 
-    // LaunchedEffect para preencher os campos quando os dados do paciente forem carregados
     LaunchedEffect(selectedPatientState) {
         when (selectedPatientState) {
             is SinglePatientUiState.Success -> {
                 val patient = (selectedPatientState as SinglePatientUiState.Success).patient
                 name = patient.name
-
-                // CORREÇÃO DA DATA DE NASCIMENTO PARA EXIBIÇÃO USANDO SimpleDateFormat:
-                // API retorna dd/MM/yyyy. Queremos DD/MM/YYYY para o usuário.
                 patient.date_of_birth?.let { apiDateString ->
                     val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                     displayFormat.isLenient = false
 
                     try {
-                        // Tenta ver se já é o formato de exibição DD/MM/YYYY
-                        displayFormat.parse(apiDateString) // Isso validará se está no formato
-                        birthDate = apiDateString // Se parsear, já está no formato certo
+                        displayFormat.parse(apiDateString)
+                        birthDate = apiDateString
                     } catch (e: ParseException) {
-                        // Se não parsear como DD/MM/YYYY, pode ser YYYY-MM-DD ou outro (menos provável, mas tratado)
                         try {
-                            val apiFormatAlt = SimpleDateFormat("yyyy-MM-dd", Locale.US) // Para o caso de ser YYYY-MM-DD
+                            val apiFormatAlt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                             apiFormatAlt.isLenient = false
                             val dateObject = apiFormatAlt.parse(apiDateString)
                             birthDate = dateObject?.let { displayFormat.format(it) } ?: ""
                         } catch (e2: ParseException) {
-                            birthDate = "" // Falha total na conversão
+                            birthDate = ""
                             Toast.makeText(context, "Erro: Data da API em formato desconhecido: $apiDateString", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        birthDate = "" // Captura outras exceções inesperadas
+                        birthDate = ""
                         Toast.makeText(context, "Erro inesperado ao processar data da API: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
 
-                // CORREÇÃO DO GÊNERO: Mapeie o código do gênero para o texto de exibição
                 selectedGender = when (patient.gender?.uppercase(Locale.getDefault())) {
                     "M" -> "Masculino"
                     "F" -> "Feminino"
                     "O" -> "Outro"
-                    else -> null // Se for algo inesperado, não seleciona nada
+                    else -> null
                 }
                 phone = patient.cellphone ?: ""
                 cpf = patient.cpf ?: ""
@@ -124,13 +113,12 @@ fun PatientRegisterScreen(
         }
     }
 
-    // Reage a mudanças no estado de registro/atualização
     LaunchedEffect(registerState) {
         when (registerState) {
             is PatientUiState.Success -> {
                 val message = if (isEditing) "Paciente atualizado com sucesso!" else "Paciente cadastrado com sucesso!"
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                navController.popBackStack() // Volta para a tela anterior
+                navController.popBackStack()
                 viewModel.resetRegisterState()
             }
             is PatientUiState.Error -> {
@@ -192,8 +180,8 @@ fun PatientRegisterScreen(
                 onExpandedChange = { genderExpanded = !genderExpanded }
             ) {
                 OutlinedTextField(
-                    value = selectedGender ?: "", // Exibe o valor selecionado
-                    onValueChange = {}, // readOnly é true, então não altera o valor aqui
+                    value = selectedGender ?: "",
+                    onValueChange = {},
                     readOnly = true,
                     label = { Text("Gênero") },
                     trailingIcon = {
@@ -256,7 +244,6 @@ fun PatientRegisterScreen(
 
             Button(
                 onClick = {
-                    // Validações antes de enviar
                     nameError = name.isEmpty()
                     birthDateError = birthDate.isNotEmpty() && !isValidDate(birthDate)
                     genderError = selectedGender == null
@@ -267,7 +254,6 @@ fun PatientRegisterScreen(
                         return@Button
                     }
 
-                    // Mapeia a string de exibição do gênero ("Masculino") para o código da API ('M')
                     val genderCode = when (selectedGender?.lowercase(Locale.getDefault())) {
                         "masculino" -> "M"
                         "feminino" -> "F"
@@ -275,30 +261,24 @@ fun PatientRegisterScreen(
                         else -> null
                     }
 
-                    // Formata a data de entrada (DD/MM/YYYY) para o formato da API (YYYY-MM-DD)
                     val formattedDateForApi = try {
                         if (birthDate.isNotEmpty()) {
-                            // Formato de entrada (usuário): DD/MM/YYYY
                             val inputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                            inputFormat.isLenient = false // Garante validação estrita para entrada do usuário
+                            inputFormat.isLenient = false
 
-                            // Formato de saída (API): YYYY-MM-DD
-                            val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US) // Use Locale.US para garantir ISO 8601
-
-                            // 1. Parse a string de entrada para um objeto Date
+                            val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                             val dateObject = inputFormat.parse(birthDate)
-                            // 2. Formate o objeto Date para a string de saída
                             outputFormat.format(dateObject)
                         } else {
                             null
                         }
                     } catch (e: ParseException) {
                         Toast.makeText(context, "Erro de formatação de data ao salvar. Verifique o formato DD/MM/AAAA.", Toast.LENGTH_LONG).show()
-                        birthDateError = true // Marca o erro
-                        return@Button // Impede o envio
+                        birthDateError = true
+                        return@Button
                     } catch (e: Exception) {
                         Toast.makeText(context, "Erro inesperado na data ao salvar: ${e.message}", Toast.LENGTH_LONG).show()
-                        return@Button // Impede o envio
+                        return@Button
                     }
 
                     val patientRequest = PatientRequest(
@@ -329,14 +309,12 @@ fun PatientRegisterScreen(
     }
 }
 
-
-// Função auxiliar para validação de data (para o formato DD/MM/YYYY do usuário)
 private fun isValidDate(dateString: String): Boolean {
     if (dateString.isEmpty()) return true
 
     return try {
         val format = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        format.isLenient = false // Impede que "31/02/2025" seja considerado válido
+        format.isLenient = false
         format.parse(dateString)
         true
     } catch (e: ParseException) {

@@ -6,10 +6,10 @@ import com.example.skinhealthai.data.model.ConsultationResponse
 import com.example.skinhealthai.repository.ConsultationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow // Importar asStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Estados para a UI da tela de histórico de análises
+
 sealed class AnalysisHistoryUiState {
     object Loading : AnalysisHistoryUiState()
     data class Loaded(val consultations: List<ConsultationResponse>) : AnalysisHistoryUiState()
@@ -17,7 +17,6 @@ sealed class AnalysisHistoryUiState {
     object Idle : AnalysisHistoryUiState()
 }
 
-// NOVO: Estados para a UI da exclusão de consulta
 sealed class DeleteConsultationUiState {
     object Idle : DeleteConsultationUiState()
     object Loading : DeleteConsultationUiState()
@@ -31,17 +30,16 @@ class AnalysisHistoryViewModel(
 ) : ViewModel() {
 
     private val _analysisHistoryState = MutableStateFlow<AnalysisHistoryUiState>(AnalysisHistoryUiState.Idle)
-    val analysisHistoryState: StateFlow<AnalysisHistoryUiState> = _analysisHistoryState.asStateFlow() // Use asStateFlow
+    val analysisHistoryState: StateFlow<AnalysisHistoryUiState> = _analysisHistoryState.asStateFlow()
 
-    // NOVO: StateFlow para o estado de exclusão
     private val _deleteConsultationState = MutableStateFlow<DeleteConsultationUiState>(DeleteConsultationUiState.Idle)
-    val deleteConsultationState: StateFlow<DeleteConsultationUiState> = _deleteConsultationState.asStateFlow() // Use asStateFlow
+    val deleteConsultationState: StateFlow<DeleteConsultationUiState> = _deleteConsultationState.asStateFlow()
 
     init {
         loadAnalysisHistory()
     }
 
-    fun loadAnalysisHistory() {
+    private fun loadAnalysisHistory() {
         viewModelScope.launch {
             _analysisHistoryState.value = AnalysisHistoryUiState.Loading
             try {
@@ -58,7 +56,6 @@ class AnalysisHistoryViewModel(
         }
     }
 
-    // NOVO: Função para deletar uma consulta
     fun deleteConsultation(consultationId: Int) {
         viewModelScope.launch {
             _deleteConsultationState.value = DeleteConsultationUiState.Loading
@@ -66,7 +63,7 @@ class AnalysisHistoryViewModel(
                 val response = consultationRepository.deleteConsultation(consultationId)
                 if (response.isSuccessful) {
                     _deleteConsultationState.value = DeleteConsultationUiState.Success
-                    loadAnalysisHistory() // Recarrega a lista após exclusão bem-sucedida
+                    loadAnalysisHistory()
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido ao excluir consulta."
                     _deleteConsultationState.value = DeleteConsultationUiState.Error(message)
@@ -77,7 +74,6 @@ class AnalysisHistoryViewModel(
         }
     }
 
-    // NOVO: Função para resetar o estado de exclusão
     fun resetDeleteConsultationState() {
         _deleteConsultationState.value = DeleteConsultationUiState.Idle
     }

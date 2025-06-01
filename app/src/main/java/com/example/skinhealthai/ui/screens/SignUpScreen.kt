@@ -1,16 +1,16 @@
 package com.example.skinhealthai.ui.screens
 
-import android.widget.Toast // Importe Toast para feedback ao usuário
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // Importe todas as funções de runtime
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext // Importe LocalContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
@@ -18,26 +18,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.skinhealthai.data.model.UserRequest // Importe UserRequest
-import com.example.skinhealthai.data.network.RetrofitInstance // Importe RetrofitInstance
+import com.example.skinhealthai.data.model.UserRequest
+import com.example.skinhealthai.data.network.RetrofitInstance
 import com.example.skinhealthai.ui.theme.BluePrimary
 import com.example.skinhealthai.ui.theme.BlueSecondary
 import com.example.skinhealthai.ui.theme.LightGray
-import kotlinx.coroutines.launch // Importe launch para coroutines
-import retrofit2.HttpException // Importe HttpException para tratamento de erro de rede
+import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 @Composable
 fun SignUpScreen(navController: NavController) {
-    val context = LocalContext.current // Obtenha o contexto para o Toast
-    val apiService = remember { RetrofitInstance.api } // Obtenha a instância do serviço da API
-    val coroutineScope = rememberCoroutineScope() // Crie um escopo de coroutine
+    val context = LocalContext.current
+    val apiService = remember { RetrofitInstance.api }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Renomeado 'nome' para 'username' para corresponder ao Django
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    // Renomeado 'senha' para 'password' para consistência
     var password by remember { mutableStateOf("") }
-    // Adicionado professionalId, pois é obrigatório no seu User do Django
     var professionalId by remember { mutableStateOf("") }
 
     Column(
@@ -59,9 +56,9 @@ fun SignUpScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
-            value = username, // Usando 'username' agora
+            value = username,
             onValueChange = { username = it },
-            label = { Text("Nome de Usuário", color = BluePrimary) }, // Rótulo atualizado
+            label = { Text("Nome de Usuário", color = BluePrimary) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions.Default,
@@ -82,7 +79,7 @@ fun SignUpScreen(navController: NavController) {
             label = { Text("Email", color = BluePrimary) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), // Tipo de teclado para email
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = BluePrimary,
                 unfocusedBorderColor = BlueSecondary,
@@ -95,12 +92,12 @@ fun SignUpScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = password, // Usando 'password' agora
+            value = password,
             onValueChange = { password = it },
             label = { Text("Senha", color = BluePrimary) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), // Tipo de teclado para senha
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = BluePrimary,
@@ -113,7 +110,6 @@ fun SignUpScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo para Professional ID
         OutlinedTextField(
             value = professionalId,
             onValueChange = { professionalId = it },
@@ -132,15 +128,13 @@ fun SignUpScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botão de Cadastrar
         HomeButton("Cadastrar") {
-            // Lógica de cadastro da API
             coroutineScope.launch {
                 val userRequest = UserRequest(
-                    username = username, // Usa 'username'
+                    username = username,
                     email = email,
                     password = password,
-                    professional_id = professionalId // Usa 'professionalId'
+                    professional_id = professionalId
                 )
 
                 try {
@@ -149,9 +143,9 @@ fun SignUpScreen(navController: NavController) {
                         val userResponse = response.body()
                         Toast.makeText(context, "Cadastro realizado com sucesso!", Toast.LENGTH_SHORT).show()
                         println("Cadastro bem-sucedido. Token: ${userResponse?.token}")
-                        // Navega para a tela de login após o sucesso
+
                         navController.navigate("login") {
-                            popUpTo("signup") { inclusive = true } // Remove a tela de cadastro da pilha
+                            popUpTo("signup") { inclusive = true }
                         }
                     } else {
                         val errorBody = response.errorBody()?.string()

@@ -1,9 +1,8 @@
-// com.example.skinhealthai.ui.screens/LoginScreen.kt
 package com.example.skinhealthai.ui.screens
 
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.skinhealthai.viewmodel.LoginViewModel // Mantenha este import
-import com.example.skinhealthai.viewmodel.LoginState // Mantenha este import
+import com.example.skinhealthai.viewmodel.LoginViewModel
+import com.example.skinhealthai.viewmodel.LoginState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.remember
@@ -34,7 +33,7 @@ import com.example.skinhealthai.ui.theme.LightGray
 import com.example.skinhealthai.utils.AuthTokenManager
 
 @Composable
-fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) { // Injete o LoginViewModel
+fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current

@@ -5,7 +5,6 @@ import com.example.skinhealthai.data.model.ConsultationResponse
 import com.example.skinhealthai.data.model.UserLoginRequest
 import com.example.skinhealthai.data.model.UserRequest
 import com.example.skinhealthai.data.model.UserResponse
-import com.example.skinhealthai.data.model.Patient
 import com.example.skinhealthai.data.model.PatientRequest
 import com.example.skinhealthai.data.model.PatientResponse
 import com.example.skinhealthai.data.model.PredictionResponse

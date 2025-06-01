@@ -1,4 +1,3 @@
-// com.example.skinhealthai.viewmodel/LoginViewModel.kt
 package com.example.skinhealthai.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -35,7 +34,6 @@ class LoginViewModel(
                 _loggedInUserName.value = user.userName
                 _loginState.value = LoginState.Success(user)
             } catch (e: Exception) {
-                // CORREÇÃO AQUI: Era _loggedInState, deve ser _loginState
                 _loginState.value = LoginState.Error(e.message ?: "Erro desconhecido")
             }
         }
@@ -43,7 +41,7 @@ class LoginViewModel(
 
     fun logout() {
         _loggedInUserName.value = null
-        _loginState.value = LoginState.Idle // Reinicia o estado de login
+        _loginState.value = LoginState.Idle
     }
 
     fun resetState() {

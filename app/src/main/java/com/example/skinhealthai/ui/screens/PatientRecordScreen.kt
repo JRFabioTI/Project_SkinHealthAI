@@ -1,6 +1,5 @@
 package com.example.skinhealthai.ui.screens
 
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,15 +18,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.rememberImagePainter // Para carregar a imagem
-import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel // Seu ViewModel de Consulta
-import com.example.skinhealthai.ui.viewmodel.PatientDataUiState // Estados de UI do paciente
-import com.example.skinhealthai.ui.viewmodel.PatientConsultationsUiState // Importe o novo estado
-import com.example.skinhealthai.data.model.ConsultationResponse // Importe para usar na lista de consultas
+import coil.compose.rememberImagePainter
+import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
+import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
+import com.example.skinhealthai.ui.viewmodel.PatientConsultationsUiState
+import com.example.skinhealthai.data.model.ConsultationResponse
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.text.ParseException // Importe para lidar com erros de parsing de data
+import java.text.ParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,10 +97,9 @@ fun PatientRecordScreen(
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
-                    // Formata e exibe a data de nascimento do paciente
+
                     patient.date_of_birth?.let { apiDateString ->
                         val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                        // *** CORREÇÃO AQUI para apiFormat da data de nascimento ***
                         val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
                         val formattedDate = try {
@@ -165,7 +163,6 @@ fun PatientRecordScreen(
 
                             if (consultationToDisplay != null) {
                                 val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                                // *** CORREÇÃO AQUI para apiDateTimeFormat da data da consulta ***
                                 val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()) // Adicionado 'X' para o fuso horário Z
 
                                 val formattedConsultationDate = try {
@@ -184,7 +181,7 @@ fun PatientRecordScreen(
                                 )
                                 consultationToDisplay.photoLocation?.let { photoLoc ->
                                     Text(
-                                        text = "Local da Foto: ${photoLoc}",
+                                        text = "Local da Foto: $photoLoc",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
 

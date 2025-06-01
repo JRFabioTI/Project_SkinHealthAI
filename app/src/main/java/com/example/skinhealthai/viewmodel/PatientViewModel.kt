@@ -10,8 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// AQUI ESTÁ A ÚNICA DEFINIÇÃO DE PatientUiState
-// Ela será usada tanto para registro/criação quanto para atualização de paciente.
+
 sealed class PatientUiState {
     object Idle : PatientUiState()
     object Loading : PatientUiState()
@@ -19,7 +18,6 @@ sealed class PatientUiState {
     data class Error(val message: String) : PatientUiState()
 }
 
-// Esta é a definição para o estado de buscar UM único paciente (para edição)
 sealed class SinglePatientUiState {
     object Idle : SinglePatientUiState()
     object Loading : SinglePatientUiState()
@@ -27,7 +25,6 @@ sealed class SinglePatientUiState {
     data class Error(val message: String) : SinglePatientUiState()
 }
 
-// Esta é a definição para o estado de exclusão de paciente
 sealed class DeletePatientUiState {
     object Idle : DeletePatientUiState()
     object Loading : DeletePatientUiState()
@@ -40,7 +37,6 @@ class PatientViewModel(
     private val repository: PatientRepository = PatientRepository()
 ) : ViewModel() {
 
-    // _registerState usa PatientUiState
     private val _registerState = MutableStateFlow<PatientUiState>(PatientUiState.Idle)
     val registerState: StateFlow<PatientUiState> = _registerState.asStateFlow()
 
@@ -50,42 +46,41 @@ class PatientViewModel(
     private val _deleteState = MutableStateFlow<DeletePatientUiState>(DeletePatientUiState.Idle)
     val deleteState: StateFlow<DeletePatientUiState> = _deleteState.asStateFlow()
 
-    // _selectedPatient usa SinglePatientUiState
     private val _selectedPatient = MutableStateFlow<SinglePatientUiState>(SinglePatientUiState.Idle)
     val selectedPatient: StateFlow<SinglePatientUiState> = _selectedPatient.asStateFlow()
 
     fun registerPatient(patientRequest: PatientRequest) {
         viewModelScope.launch {
-            _registerState.value = PatientUiState.Loading // Acesso a PatientUiState
+            _registerState.value = PatientUiState.Loading
             try {
                 val response = repository.createPatient(patientRequest)
                 if (response.isSuccessful && response.body() != null) {
-                    _registerState.value = PatientUiState.Success(response.body()!!) // Acesso a PatientUiState
+                    _registerState.value = PatientUiState.Success(response.body()!!)
                     fetchPatients()
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido no servidor"
-                    _registerState.value = PatientUiState.Error(message) // Acesso a PatientUiState
+                    _registerState.value = PatientUiState.Error(message)
                 }
             } catch (e: Exception) {
-                _registerState.value = PatientUiState.Error(e.message ?: "Erro inesperado") // Acesso a PatientUiState
+                _registerState.value = PatientUiState.Error(e.message ?: "Erro inesperado")
             }
         }
     }
 
     fun updatePatient(patientId: Int, patientRequest: PatientRequest) {
         viewModelScope.launch {
-            _registerState.value = PatientUiState.Loading // Acesso a PatientUiState (reutilizado)
+            _registerState.value = PatientUiState.Loading
             try {
                 val response = repository.updatePatient(patientId, patientRequest)
                 if (response.isSuccessful && response.body() != null) {
-                    _registerState.value = PatientUiState.Success(response.body()!!) // Acesso a PatientUiState
+                    _registerState.value = PatientUiState.Success(response.body()!!)
                     fetchPatients()
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido ao atualizar paciente"
-                    _registerState.value = PatientUiState.Error(message) // Acesso a PatientUiState
+                    _registerState.value = PatientUiState.Error(message)
                 }
             } catch (e: Exception) {
-                _registerState.value = PatientUiState.Error(e.message ?: "Erro de rede ao atualizar paciente") // Acesso a PatientUiState
+                _registerState.value = PatientUiState.Error(e.message ?: "Erro de rede ao atualizar paciente")
             }
         }
     }
@@ -107,17 +102,17 @@ class PatientViewModel(
 
     fun fetchPatientById(patientId: Int) {
         viewModelScope.launch {
-            _selectedPatient.value = SinglePatientUiState.Loading // Acesso a SinglePatientUiState
+            _selectedPatient.value = SinglePatientUiState.Loading
             try {
                 val response = repository.getPatientById(patientId)
                 if (response.isSuccessful && response.body() != null) {
-                    _selectedPatient.value = SinglePatientUiState.Success(response.body()!!) // Acesso a SinglePatientUiState
+                    _selectedPatient.value = SinglePatientUiState.Success(response.body()!!)
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao buscar paciente"
-                    _selectedPatient.value = SinglePatientUiState.Error(message) // Acesso a SinglePatientUiState
+                    _selectedPatient.value = SinglePatientUiState.Error(message)
                 }
             } catch (e: Exception) {
-                _selectedPatient.value = SinglePatientUiState.Error(e.message ?: "Erro de rede ao buscar paciente") // Acesso a SinglePatientUiState
+                _selectedPatient.value = SinglePatientUiState.Error(e.message ?: "Erro de rede ao buscar paciente")
             }
         }
     }
@@ -141,7 +136,7 @@ class PatientViewModel(
     }
 
     fun resetRegisterState() {
-        _registerState.value = PatientUiState.Idle // Acesso a PatientUiState
+        _registerState.value = PatientUiState.Idle
     }
 
     fun resetDeleteState() {
@@ -149,6 +144,6 @@ class PatientViewModel(
     }
 
     fun resetSelectedPatientState() {
-        _selectedPatient.value = SinglePatientUiState.Idle // Acesso a SinglePatientUiState
+        _selectedPatient.value = SinglePatientUiState.Idle
     }
 }

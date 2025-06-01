@@ -56,8 +56,6 @@ fun ConsultationScreen(
                 consultationDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
                 photoLocationDescription = ""
                 notes = ""
-                // --- CORREÇÃO AQUI: Navegação para a rota do prontuário com patientId como path parameter ---
-                // Não use 'val' ou '{patientId}' aqui, apenas a base e o ID real.
                 navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}")
                 consultationViewModel.resetConsultationCreationState()
             }
@@ -66,7 +64,6 @@ fun ConsultationScreen(
                 consultationViewModel.resetConsultationCreationState()
             }
             ConsultationCreationState.Idle, ConsultationCreationState.Loading -> {
-                // Não é necessário Toast ou navegação aqui, pois a UI já trata Loading no botão
             }
         }
     }
