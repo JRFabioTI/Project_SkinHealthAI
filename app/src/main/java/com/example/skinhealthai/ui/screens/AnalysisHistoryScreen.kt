@@ -36,6 +36,7 @@ import com.example.skinhealthai.viewmodel.DeleteConsultationUiState // Importar
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.text.ParseException
+import com.example.skinhealthai.ui.screens.AppRoutes // Importar AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,13 +112,20 @@ fun AnalysisHistoryScreen(
                             AnalysisHistoryListItem(
                                 consultation = consultation,
                                 onClick = {
-                                    // CORREÇÃO: Use 'consultation.patientDetails?.id' e a rota correta
-                                    // Assumindo que PatientRecordScreen pode receber patientId e talvez consultationId
+                                    // *** CORREÇÃO AQUI: Passar patientId E consultationId ***
                                     consultation.patientDetails?.id?.let { patientId ->
-                                        // Você pode querer navegar para o prontuário do paciente
-                                        navController.navigate("patient_record/${patientId}")
-                                        // Ou para uma tela de detalhes da consulta específica
-                                        // navController.navigate("consultation_detail/${consultation.id}")
+                                        consultation.id?.let { consultationId ->
+                                            // Navegar para o prontuário com o ID do paciente e o ID da consulta
+                                            navController.navigate(
+                                                "${AppRoutes.PATIENT_RECORD_BASE}/${patientId}?consultationId=${consultationId}"
+                                            )
+                                        } ?: run {
+                                            // Caso o consultation.id seja nulo, ainda navega para o prontuário do paciente (mostrará a última consulta)
+                                            Toast.makeText(context, "ID da consulta não encontrado para esta entrada.", Toast.LENGTH_SHORT).show()
+                                            navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}")
+                                        }
+                                    } ?: run {
+                                        Toast.makeText(context, "ID do paciente não encontrado para esta entrada.", Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 onDeleteClick = { clickedConsultation -> // Passa o objeto completo

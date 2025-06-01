@@ -34,6 +34,7 @@ import java.text.ParseException // Importe para lidar com erros de parsing de da
 fun PatientRecordScreen(
     navController: NavController,
     patientId: Int?,
+    consultationId: Int? = null, // *** NOVO PARÂMETRO: ID da consulta específica ***
     consultationViewModel: ConsultationViewModel = viewModel() // Injete o ViewModel
 ) {
 
@@ -45,7 +46,7 @@ fun PatientRecordScreen(
     LaunchedEffect(patientId) {
         if (patientId != null) {
             consultationViewModel.loadPatient(patientId)
-            consultationViewModel.loadPatientConsultations(patientId) // Ainda carrega todas para pegar a mais recente
+            consultationViewModel.loadPatientConsultations(patientId) // Carrega todas as consultas do paciente
         }
     }
 
@@ -142,9 +143,9 @@ fun PatientRecordScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Dados da Última Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Dados da Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) // Alterado de "Dados da Última Consulta"
 
-                    // Exibir os dados da última consulta (a mais recente, por exemplo)
+                    // Exibir os dados da consulta, seja a selecionada ou a mais recente
                     when (patientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -152,23 +153,29 @@ fun PatientRecordScreen(
                         }
                         is PatientConsultationsUiState.Loaded -> {
                             val consultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
-                            // Encontrar a consulta mais recente (assumindo que a API retorna em ordem ou você ordena aqui)
-                            val latestConsultation = consultations.maxByOrNull {
-                                try {
-                                    // Parse a data da API para um objeto Date para comparação
-                                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0)
-                                } catch (e: Exception) {
-                                    Date(0) // Retorna Date(0) em caso de exceção para que seja tratada como muito antiga
+
+                            // *** LÓGICA DE SELEÇÃO DA CONSULTA ***
+                            val consultationToDisplay: ConsultationResponse? = if (consultationId != null) {
+                                // Se um consultationId foi fornecido, tente encontrar essa consulta
+                                consultations.firstOrNull { it.id == consultationId }
+                            } else {
+                                // Caso contrário (ou se a consulta específica não for encontrada), mostre a mais recente
+                                consultations.maxByOrNull {
+                                    try {
+                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0)
+                                    } catch (e: Exception) {
+                                        Date(0)
+                                    }
                                 }
                             }
 
-                            if (latestConsultation != null) {
+                            if (consultationToDisplay != null) {
                                 // Formata a data da consulta para exibição
                                 val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                                 val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
 
                                 val formattedConsultationDate = try {
-                                    apiDateTimeFormat.parse(latestConsultation.dateConsultation)?.let { dateObject ->
+                                    apiDateTimeFormat.parse(consultationToDisplay.dateConsultation)?.let { dateObject ->
                                         displayDateFormat.format(dateObject)
                                     }
                                 } catch (e: ParseException) {
@@ -178,16 +185,15 @@ fun PatientRecordScreen(
                                 }
 
                                 Text(
-                                    text = "Data da Consulta: ${formattedConsultationDate ?: "Não informada"}", // Mostra "Não informada" se o formato der errado
+                                    text = "Data da Consulta: ${formattedConsultationDate ?: "Não informada"}",
                                     style = MaterialTheme.typography.bodyLarge
                                 )
-                                latestConsultation.photoLocation?.let { photoLoc ->
+                                consultationToDisplay.photoLocation?.let { photoLoc ->
                                     Text(
                                         text = "Local da Foto: ${photoLoc}",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
 
-                                    // Exibir a imagem se photoLoc for uma URL válida
                                     if (photoLoc.startsWith("http://") || photoLoc.startsWith("https://")) {
                                         Image(
                                             painter = rememberImagePainter(data = photoLoc),
@@ -198,7 +204,6 @@ fun PatientRecordScreen(
                                             contentScale = ContentScale.Crop
                                         )
                                     } else {
-                                        // Se for uma descrição de texto ou um caminho local que não pode ser carregado diretamente aqui
                                         Text(text = "Caminho da foto (local): ${photoLoc.split('/').lastOrNull() ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
                                     }
                                 } ?: run {
@@ -208,7 +213,7 @@ fun PatientRecordScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                latestConsultation.notes?.let { notes ->
+                                consultationToDisplay.notes?.let { notes ->
                                     Text(
                                         text = "Notas: $notes",
                                         style = MaterialTheme.typography.bodyLarge
@@ -221,7 +226,7 @@ fun PatientRecordScreen(
                                     )
                                 }
                             } else {
-                                Text(text = "Nenhuma consulta registrada para este paciente.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = "Nenhuma consulta encontrada para este paciente ou a consulta selecionada não existe.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         is PatientConsultationsUiState.Error -> {
@@ -245,7 +250,6 @@ fun PatientRecordScreen(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }
-                // --- AQUI ESTÁ A CORREÇÃO ---
                 is PatientDataUiState.Idle -> {
                     Text("Aguardando o carregamento dos dados do paciente...", modifier = Modifier.align(Alignment.CenterHorizontally))
                 }

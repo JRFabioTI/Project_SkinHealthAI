@@ -9,13 +9,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.navigation.compose.rememberNavController // Certifique-se de ter este import se usar rememberNavController aqui
+import androidx.navigation.compose.rememberNavController
 
 // Importações que podem ser necessárias dependendo do seu projeto
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.utils.ImageStorage
-import com.example.skinhealthai.ui.theme.screens.HomeScreen // Verifique o caminho correto do seu HomeScreen
+import com.example.skinhealthai.ui.theme.screens.HomeScreen
 import com.example.skinhealthai.viewmodel.LoginViewModel
 
 
@@ -36,7 +36,7 @@ object AppRoutes {
     const val PATIENT_RECORD_BASE = "patient_record"
     // Agora 'val' pois contém um placeholder
     val PATIENT_RECORD_WITH_PATIENT_ID = "$PATIENT_RECORD_BASE/{patientId}"
-    // Se você precisar de um consultationId específico, embora não seja o foco principal agora
+    // Rota para o prontuário que aceita patientId (obrigatório) e consultationId (opcional)
     val PATIENT_RECORD_WITH_PATIENT_ID_AND_CONSULTATION_ID = "$PATIENT_RECORD_WITH_PATIENT_ID?consultationId={consultationId}"
 
 
@@ -50,7 +50,7 @@ object AppRoutes {
 }
 
 @Composable
-fun AppNavigation(navController: NavHostController = rememberNavController()) { // Adicione rememberNavController como default
+fun AppNavigation(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
     val imageUploadViewModel: ImageUploadViewModel = viewModel()
     val loginViewModel: LoginViewModel = viewModel()
@@ -79,7 +79,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) { 
 
         // Rota para a Tela de Consulta
         composable(
-            route = AppRoutes.CONSULTATION_SCREEN_WITH_PATIENT_ID, // Use a nova rota 'val'
+            route = AppRoutes.CONSULTATION_SCREEN_WITH_PATIENT_ID,
             arguments = listOf(navArgument("patientId") { type = NavType.IntType })
         ) { backStackEntry ->
             val patientId = backStackEntry.arguments?.getInt("patientId")
@@ -95,10 +95,11 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) { 
 
         // Rota para a Tela de Cadastro/Edição de Paciente
         composable(
-            route = AppRoutes.PATIENT_REGISTER_WITH_ID, // Use a nova rota 'val'
+            route = AppRoutes.PATIENT_REGISTER_WITH_ID,
             arguments = listOf(navArgument("patientId") {
                 type = NavType.IntType
-                defaultValue = -1 // Valor padrão para indicar "nenhum ID"
+                defaultValue = -1 // Correção: Mantenha o defaultValue para IntType opcional
+                // REMOVA nullable = true daqui, pois IntType não permite nulos
             })
         ) { backStackEntry ->
             val patientId = backStackEntry.arguments?.getInt("patientId")
@@ -110,22 +111,30 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) { 
 
         // Rota para a Tela de Prontuário
         composable(
-            route = AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID, // Use a nova rota 'val' para o prontuário
+            route = AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID_AND_CONSULTATION_ID,
             arguments = listOf(
                 navArgument("patientId") {
                     type = NavType.IntType
-                    nullable = false // patientId é obrigatório
+                    nullable = false // patientId é obrigatório e não pode ser nulo
+                },
+                navArgument("consultationId") { // Argumento para consultationId
+                    type = NavType.IntType
+                    defaultValue = -1 // Correção: Forneça um defaultValue para IntType opcional
+                    // REMOVA nullable = true daqui, pois IntType não permite nulos
                 }
             )
         ) { backStackEntry ->
             val patientId = backStackEntry.arguments?.getInt("patientId")
+            val consultationId = backStackEntry.arguments?.getInt("consultationId")
 
             if (patientId != null) {
                 PatientRecordScreen(
                     navController = navController,
                     patientId = patientId,
+                    consultationId = if (consultationId == -1) null else consultationId
                 )
             } else {
+                // Esta condição idealmente não deveria ser alcançada com nullable = false para patientId
                 Text("Erro: ID do paciente não encontrado para o prontuário.")
             }
         }
@@ -136,7 +145,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) { 
 
         // Rota para ImageDetailScreen
         composable(
-            route = AppRoutes.SCAN_IMAGE_WITH_INDEX, // Use a nova rota 'val'
+            route = AppRoutes.SCAN_IMAGE_WITH_INDEX,
             arguments = listOf(navArgument("index") { type = NavType.IntType })
         ) { backStackEntry ->
             val index = backStackEntry.arguments?.getInt("index") ?: 0
@@ -147,8 +156,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) { 
                     bitmap = bitmap,
                     onAnalyzeClick = {
                         val file = FileUtils.saveBitmapToFile(context, bitmap)
-                        // Você pode adicionar a lógica de navegação para a tela de análise aqui,
-                        // possivelmente levando o patientId e o URI da imagem.
+                        // Lógica de navegação para análise, se aplicável
                     }
                 )
             } else {
