@@ -64,6 +64,7 @@ fun ConsultationScreen(
                 consultationViewModel.resetConsultationCreationState()
             }
             ConsultationCreationState.Idle, ConsultationCreationState.Loading -> {
+                // Não é necessário Toast ou navegação aqui, pois a UI já trata Loading no botão
             }
         }
     }
@@ -95,18 +96,46 @@ fun ConsultationScreen(
                 }
                 is PatientDataUiState.PatientLoaded -> {
                     val patient = (patientUiState as PatientDataUiState.PatientLoaded).patient
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Text(
                         text = "Paciente: ${patient.name}",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    patient.email?.let { Text(text = "Email: $it", style = MaterialTheme.typography.bodyLarge) }
-                    patient.cpf?.let { Text(text = "CPF: $it", style = MaterialTheme.typography.bodyLarge) }
-                    patient.date_of_birth?.let { Text(text = "Data de Nascimento: $it", style = MaterialTheme.typography.bodyLarge) }
-                        ?: run { Text(text = "Data de Nascimento: Não informada", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    patient.email?.let {
+                        Text(
+                            text = "Email: $it",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    patient.cpf?.let {
+                        Text(
+                            text = "CPF: $it",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    patient.date_of_birth?.let {
+                        Text(
+                            text = "Data de Nascimento: $it",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } ?: run {
+                        Text(
+                            text = "Data de Nascimento: Não informada",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Dados da Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                    Text(
+                        text = "Dados da Consulta",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
@@ -121,17 +150,17 @@ fun ConsultationScreen(
                     OutlinedTextField(
                         value = photoLocationDescription,
                         onValueChange = { photoLocationDescription = it },
-                        label = { Text("Local da Foto / Descrição da Lesão (Opcional)") },
+                        label = { Text("Local da Lesão") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
-                        label = { Text("Notas da Consulta") },
+                        label = { Text("Descrição da Lesão / Notas da Consulta") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 100.dp)
+                            .heightIn(min = 130.dp)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -169,13 +198,15 @@ fun ConsultationScreen(
                             )
                             consultationViewModel.createConsultation(consultationRequest)
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .align(Alignment.CenterHorizontally),
                         enabled = consultationCreationState !is ConsultationCreationState.Loading
                     ) {
                         if (consultationCreationState is ConsultationCreationState.Loading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else {
-                            Text("Registrar Consulta")
+                            Text("Salvar")
                         }
                     }
                 }

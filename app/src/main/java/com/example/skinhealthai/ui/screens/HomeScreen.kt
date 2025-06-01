@@ -67,8 +67,8 @@ fun HomeScreen(
 
             item {
                 FeaturesSection(
-                    onNovaAnaliseClick = { navController.navigate("patient_list") },
                     onCadastrarPacienteClick = { navController.navigate("patient_register") },
+                    onNovaConsultaClick = { navController.navigate("patient_list") },
                     onHistoricoClick = { navController.navigate("analysis_history") }
                 )
             }
@@ -115,26 +115,27 @@ fun WelcomeHeader(name: String) {
 
 @Composable
 fun FeaturesSection(
-    onNovaAnaliseClick: () -> Unit,
+    onNovaConsultaClick: () -> Unit,
     onCadastrarPacienteClick: () -> Unit,
     onHistoricoClick: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         FeatureCard(
-            title = "Nova Análise",
-            description = "Capture ou envie imagem para diagnóstico IA",
-            onClick = onNovaAnaliseClick
-        )
-        FeatureCard(
-            title = "Histórico",
-            description = "Veja exames anteriores do mesmo paciente",
-            onClick = onHistoricoClick
-        )
-        FeatureCard(
-            title = "Cadastrar novo Paciente",
+            title = "Cadastrar Paciente",
             description = "Cadastre um novo paciente no sistema",
             onClick = onCadastrarPacienteClick
         )
+        FeatureCard(
+            title = "Nova Consulta",
+            description = "Crie uma consulta para para seu paciente e capture/envie imagem e receba o diagnóstico IA",
+            onClick = onNovaConsultaClick
+        )
+        FeatureCard(
+            title = "Histórico de Consultas ",
+            description = "Veja consultas e o prontuário do seu paciente",
+            onClick = onHistoricoClick
+        )
+
     }
 }
 

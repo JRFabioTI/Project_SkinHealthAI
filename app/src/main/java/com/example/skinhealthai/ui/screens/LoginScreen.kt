@@ -13,6 +13,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+// --- NOVOS IMPORTS AQUI ---
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+// --- FIM DOS NOVOS IMPORTS ---
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation // Importar VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,7 +40,7 @@ import com.example.skinhealthai.utils.AuthTokenManager
 
 @Composable
 fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = viewModel()) {
-    var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val loginState by loginViewModel.loginState.collectAsState()
@@ -78,7 +84,7 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            EmailInput(email = email, onEmailChange = { email = it })
+            UsernameInput(username = username, onUsernameChange = { username = it })
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -93,10 +99,10 @@ fun LoginScreen(navController: NavController, loginViewModel: LoginViewModel = v
             Spacer(modifier = Modifier.height(32.dp))
 
             LoginButton(
-                enabled = email.isNotBlank() && password.isNotBlank() && loginState !is LoginState.Loading,
+                enabled = username.isNotBlank() && password.isNotBlank() && loginState !is LoginState.Loading,
                 onClick = {
                     focusManager.clearFocus()
-                    loginViewModel.login(email, password)
+                    loginViewModel.login(username, password)
                 }
             )
 
@@ -134,15 +140,15 @@ fun Title() {
 }
 
 @Composable
-fun EmailInput(email: String, onEmailChange: (String) -> Unit) {
+fun UsernameInput(username: String, onUsernameChange: (String) -> Unit) {
     OutlinedTextField(
-        value = email,
-        onValueChange = onEmailChange,
-        label = { Text("Email", color = BluePrimary) },
+        value = username,
+        onValueChange = onUsernameChange,
+        label = { Text("Username", color = BluePrimary) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Email,
+            keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Next
         ),
         colors = OutlinedTextFieldDefaults.colors(
@@ -161,18 +167,31 @@ fun PasswordInput(
     onPasswordChange: (String) -> Unit,
     onDoneAction: () -> Unit
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     OutlinedTextField(
         value = password,
         onValueChange = onPasswordChange,
         label = { Text("Senha", color = BluePrimary) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
-        visualTransformation = PasswordVisualTransformation(),
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Password,
             imeAction = ImeAction.Done
         ),
         keyboardActions = KeyboardActions(onDone = { onDoneAction() }),
+        trailingIcon = {
+            val image = if (passwordVisible)
+                Icons.Filled.Visibility
+            else Icons.Filled.VisibilityOff
+
+            val description = if (passwordVisible) "Esconder senha" else "Mostrar senha"
+
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(imageVector = image, contentDescription = description)
+            }
+        },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = BluePrimary,
             unfocusedBorderColor = BlueSecondary,

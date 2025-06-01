@@ -1,4 +1,3 @@
-// com.example.skinhealthai.data.model/ConsultationResponse.kt
 package com.example.skinhealthai.data.model
 
 import com.google.gson.annotations.SerializedName

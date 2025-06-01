@@ -20,6 +20,7 @@ import com.example.skinhealthai.ui.viewmodel.SinglePatientUiState
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.ui.Alignment
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,7 +147,7 @@ fun PatientRegisterScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             OutlinedTextField(
                 value = name,
@@ -217,6 +218,8 @@ fun PatientRegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            Spacer(modifier = Modifier.height(5.dp))
+
             OutlinedTextField(
                 value = cpf,
                 onValueChange = {
@@ -240,7 +243,8 @@ fun PatientRegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            //Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(27.dp))
 
             Button(
                 onClick = {
@@ -296,7 +300,9 @@ fun PatientRegisterScreen(
                         viewModel.registerPatient(patientRequest)
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .align(Alignment.CenterHorizontally),
                 enabled = registerState !is PatientUiState.Loading && selectedPatientState !is SinglePatientUiState.Loading
             ) {
                 if (registerState is PatientUiState.Loading || selectedPatientState is SinglePatientUiState.Loading) {

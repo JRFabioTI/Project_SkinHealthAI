@@ -42,7 +42,8 @@ fun SignUpScreen(navController: NavController) {
             .fillMaxSize()
             .background(LightGray)
             .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = "Cadastro",

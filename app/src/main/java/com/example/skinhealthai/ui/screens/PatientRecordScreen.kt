@@ -80,8 +80,10 @@ fun PatientRecordScreen(
                 is PatientDataUiState.PatientLoaded -> {
                     val patient = (patientUiState as PatientDataUiState.PatientLoaded).patient
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Text(
-                        text = "Nome Completo: ${patient.name}",
+                        text = "Nome: ${patient.name}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -139,7 +141,7 @@ fun PatientRecordScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Dados da Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Dados da Consulta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
                     when (patientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {

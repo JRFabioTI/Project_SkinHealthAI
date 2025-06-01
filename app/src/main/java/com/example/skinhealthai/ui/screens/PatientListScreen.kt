@@ -44,6 +44,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.example.skinhealthai.ui.viewmodel.DeletePatientUiState
 import com.example.skinhealthai.ui.viewmodel.PatientViewModel
+import androidx.compose.foundation.layout.Spacer // Adicionar este import
+import androidx.compose.foundation.layout.height // Adicionar este import
+import androidx.compose.ui.Alignment // Adicionar este import caso queira centralizar o texto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +100,7 @@ fun PatientListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Escolha um paciente da sua lista", fontWeight = FontWeight.Bold) },
+                title = { Text("Lista de Pacientes", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
@@ -109,8 +112,17 @@ fun PatientListScreen(
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
+            Text(
+                text = "Selecione um paciente da sua lista para criar uma nova consulta.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+
             OutlinedTextField(
                 value = textFieldValue,
                 onValueChange = { textFieldValue = it },
@@ -125,7 +137,7 @@ fun PatientListScreen(
                 if (filteredPatients.isEmpty()) {
                     item {
                         Text(
-                            text = "Nenhum paciente encontrado.",
+                            text = "Nenhum paciente encontrado. Cadastre um paciente",
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier
                                 .fillMaxWidth()
