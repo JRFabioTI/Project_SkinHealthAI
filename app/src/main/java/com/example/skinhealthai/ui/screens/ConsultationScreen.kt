@@ -64,7 +64,6 @@ fun ConsultationScreen(
                 consultationViewModel.resetConsultationCreationState()
             }
             ConsultationCreationState.Idle, ConsultationCreationState.Loading -> {
-                // Não é necessário Toast ou navegação aqui, pois a UI já trata Loading no botão
             }
         }
     }

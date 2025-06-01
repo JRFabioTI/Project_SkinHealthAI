@@ -1,5 +1,6 @@
 package com.example.skinhealthai.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -33,7 +34,6 @@ import java.text.ParseException
 fun PatientRecordScreen(
     navController: NavController,
     patientId: Int?,
-    consultationId: Int? = null,
     consultationViewModel: ConsultationViewModel = viewModel()
 ) {
 
@@ -68,7 +68,7 @@ fun PatientRecordScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -84,19 +84,19 @@ fun PatientRecordScreen(
 
                     Text(
                         text = "Nome: ${patient.name}",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     patient.email?.let {
                         Text(
                             text = "Email: $it",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     patient.cpf?.let {
                         Text(
                             text = "CPF: $it",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
 
@@ -108,118 +108,112 @@ fun PatientRecordScreen(
                             apiFormat.parse(apiDateString)?.let { dateObject ->
                                 displayFormat.format(dateObject)
                             }
-                        } catch (e: ParseException) {
-                            null
-                        } catch (e: Exception) {
-                            null
-                        }
+                        } catch (e: ParseException) { null } catch (e: Exception) { null }
 
                         if (formattedDate != null) {
                             Text(
                                 text = "Data de Nascimento: $formattedDate",
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         } else {
                             Text(
                                 text = "Data de Nascimento: Não informada",
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     } ?: run {
                         Text(
                             text = "Data de Nascimento: Não informada",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     patient.cellphone?.let {
                         Text(
                             text = "Telefone: $it",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Dados da Consulta", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Histórico de Consultas",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
 
                     when (patientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                            Text("Carregando dados da consulta...", modifier = Modifier.align(Alignment.CenterHorizontally))
+                            Text("Carregando histórico de consultas...", modifier = Modifier.align(Alignment.CenterHorizontally))
                         }
                         is PatientConsultationsUiState.Loaded -> {
                             val consultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
 
-                            val consultationToDisplay: ConsultationResponse? = if (consultationId != null) {
-                                consultations.firstOrNull { it.id == consultationId }
+                            if (consultations.isEmpty()) {
+                                Text(text = "Nenhuma consulta registrada para este paciente.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
-                                consultations.maxByOrNull {
+                                val sortedConsultations = consultations.sortedByDescending {
                                     try {
-                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0) // Usar X para Z
+                                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()).parse(it.dateConsultation) ?: Date(0)
                                     } catch (e: Exception) {
                                         Date(0)
                                     }
                                 }
-                            }
 
-                            if (consultationToDisplay != null) {
-                                val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                                val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault()) // Adicionado 'X' para o fuso horário Z
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    sortedConsultations.forEach { consultation ->
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                        ) {
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                                                val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault())
 
-                                val formattedConsultationDate = try {
-                                    apiDateTimeFormat.parse(consultationToDisplay.dateConsultation)?.let { dateObject ->
-                                        displayDateFormat.format(dateObject)
+                                                val formattedConsultationDate = try {
+                                                    apiDateTimeFormat.parse(consultation.dateConsultation)?.let { dateObject ->
+                                                        displayDateFormat.format(dateObject)
+                                                    }
+                                                } catch (e: ParseException) { null } catch (e: Exception) { null }
+
+                                                Text(
+                                                    text = "Data da Consulta: ${formattedConsultationDate ?: "Não informada"}",
+                                                    style = MaterialTheme.typography.titleMedium, // Título para cada consulta
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                consultation.notes?.let { notes ->
+                                                    Text(
+                                                        text = "Notas: $notes",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
+                                                }
+                                                consultation.photoLocation?.let { photoLoc ->
+                                                    Text(
+                                                        text = "Local da Foto: $photoLoc",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
+                                                    if (photoLoc.startsWith("http://") || photoLoc.startsWith("https://")) {
+                                                        Spacer(modifier = Modifier.height(8.dp))
+                                                        Image(
+                                                            painter = rememberImagePainter(data = photoLoc),
+                                                            contentDescription = "Foto da Consulta",
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(200.dp),
+                                                            contentScale = ContentScale.Crop
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
-                                } catch (e: ParseException) {
-                                    null
-                                } catch (e: Exception) {
-                                    null
                                 }
-
-                                Text(
-                                    text = "Data da Consulta: ${formattedConsultationDate ?: "Não informada"}",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                consultationToDisplay.photoLocation?.let { photoLoc ->
-                                    Text(
-                                        text = "Local da Foto: $photoLoc",
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-
-                                    if (photoLoc.startsWith("http://") || photoLoc.startsWith("https://")) {
-                                        Image(
-                                            painter = rememberImagePainter(data = photoLoc),
-                                            contentDescription = "Foto da Consulta",
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(200.dp),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
-                                        Text(text = "Caminho da foto (local): ${photoLoc.split('/').lastOrNull() ?: "N/A"}", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                } ?: run {
-                                    Text(
-                                        text = "Local da Foto: Não informado",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                consultationToDisplay.notes?.let { notes ->
-                                    Text(
-                                        text = "Notas: $notes",
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                } ?: run {
-                                    Text(
-                                        text = "Notas: Nenhuma nota registrada",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            } else {
-                                Text(text = "Nenhuma consulta encontrada para este paciente ou a consulta selecionada não existe.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         is PatientConsultationsUiState.Error -> {
@@ -231,7 +225,7 @@ fun PatientRecordScreen(
                             )
                         }
                         is PatientConsultationsUiState.Idle -> {
-                            Text("Aguardando dados da consulta...", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Aguardando histórico de consultas...", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

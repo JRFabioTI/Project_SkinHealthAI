@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-
 sealed class PatientUiState {
     object Idle : PatientUiState()
     object Loading : PatientUiState()
@@ -32,6 +31,13 @@ sealed class DeletePatientUiState {
     data class Error(val message: String) : DeletePatientUiState()
 }
 
+sealed class PatientListUiState {
+    object Idle : PatientListUiState()
+    object Loading : PatientListUiState()
+    data class Loaded(val patients: List<PatientResponse>) : PatientListUiState()
+    data class Error(val message: String) : PatientListUiState()
+}
+
 
 class PatientViewModel(
     private val repository: PatientRepository = PatientRepository()
@@ -40,8 +46,8 @@ class PatientViewModel(
     private val _registerState = MutableStateFlow<PatientUiState>(PatientUiState.Idle)
     val registerState: StateFlow<PatientUiState> = _registerState.asStateFlow()
 
-    private val _patientList = MutableStateFlow<List<PatientResponse>>(emptyList())
-    val patientList: StateFlow<List<PatientResponse>> = _patientList.asStateFlow()
+    private val _patientList = MutableStateFlow<PatientListUiState>(PatientListUiState.Idle)
+    val patientList: StateFlow<PatientListUiState> = _patientList.asStateFlow()
 
     private val _deleteState = MutableStateFlow<DeletePatientUiState>(DeletePatientUiState.Idle)
     val deleteState: StateFlow<DeletePatientUiState> = _deleteState.asStateFlow()
@@ -87,14 +93,18 @@ class PatientViewModel(
 
     fun fetchPatients() {
         viewModelScope.launch {
+            _patientList.value = PatientListUiState.Loading
             try {
                 val response = repository.getAllPatients()
                 if (response.isSuccessful && response.body() != null) {
-                    _patientList.value = response.body()!!
+                    _patientList.value = PatientListUiState.Loaded(response.body()!!)
                 } else {
+                    val message = response.errorBody()?.string() ?: "Erro ao buscar pacientes."
+                    _patientList.value = PatientListUiState.Error(message)
                     println("Erro ao buscar pacientes: ${response.code()} - ${response.errorBody()?.string()}")
                 }
             } catch (e: Exception) {
+                _patientList.value = PatientListUiState.Error(e.message ?: "Falha na conexão ou erro desconhecido.")
                 println("Exceção ao buscar pacientes: ${e.message}")
             }
         }
@@ -124,7 +134,7 @@ class PatientViewModel(
                 val response = repository.deletePatient(patientId)
                 if (response.isSuccessful) {
                     _deleteState.value = DeletePatientUiState.Success
-                    fetchPatients()
+                    fetchPatients() // Recarrega a lista após a exclusão
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido ao excluir paciente"
                     _deleteState.value = DeletePatientUiState.Error(message)

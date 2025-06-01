@@ -28,47 +28,68 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.skinhealthai.data.model.ConsultationResponse
-import com.example.skinhealthai.viewmodel.AnalysisHistoryUiState
-import com.example.skinhealthai.viewmodel.AnalysisHistoryViewModel
-import com.example.skinhealthai.viewmodel.DeleteConsultationUiState
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.text.ParseException
+import com.example.skinhealthai.data.model.PatientResponse
+import com.example.skinhealthai.ui.viewmodel.PatientViewModel
+import com.example.skinhealthai.ui.viewmodel.DeletePatientUiState
+import com.example.skinhealthai.ui.viewmodel.PatientListUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalysisHistoryScreen(
+fun PatientHistoryScreen(
     navController: NavHostController,
-    analysisHistoryViewModel: AnalysisHistoryViewModel = viewModel()
+    patientViewModel: PatientViewModel = viewModel()
 ) {
+    var textFieldValue by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val analysisHistoryState by analysisHistoryViewModel.analysisHistoryState.collectAsState()
-    val deleteConsultationState by analysisHistoryViewModel.deleteConsultationState.collectAsState()
+
+    val patientListState by patientViewModel.patientList.collectAsState()
+    val deletePatientState by patientViewModel.deleteState.collectAsState()
 
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
-    var consultationToDelete by remember { mutableStateOf<ConsultationResponse?>(null) }
+    var patientToDelete by remember { mutableStateOf<PatientResponse?>(null) }
 
-    LaunchedEffect(deleteConsultationState) {
-        when (deleteConsultationState) {
-            is DeleteConsultationUiState.Success -> {
-                Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
-                analysisHistoryViewModel.resetDeleteConsultationState()
+    LaunchedEffect(Unit) {
+        patientViewModel.fetchPatients()
+    }
+
+    LaunchedEffect(deletePatientState) {
+        when (deletePatientState) {
+            is DeletePatientUiState.Success -> {
+                Toast.makeText(context, "Prontuário excluído com sucesso!", Toast.LENGTH_SHORT).show()
+                patientViewModel.resetDeleteState()
             }
-            is DeleteConsultationUiState.Error -> {
-                val errorMessage = (deleteConsultationState as DeleteConsultationUiState.Error).message
-                Toast.makeText(context, "Erro ao excluir consulta: $errorMessage", Toast.LENGTH_LONG).show()
-                analysisHistoryViewModel.resetDeleteConsultationState()
+            is DeletePatientUiState.Error -> {
+                val errorMessage = (deletePatientState as DeletePatientUiState.Error).message
+                Toast.makeText(context, "Erro ao excluir prontuário: $errorMessage", Toast.LENGTH_LONG).show()
+                patientViewModel.resetDeleteState()
             }
             else -> { /* Não fazer nada para Idle ou Loading */ }
         }
     }
 
+    val currentPatients: List<PatientResponse> = when (patientListState) {
+        is PatientListUiState.Loaded -> (patientListState as PatientListUiState.Loaded).patients
+        else -> emptyList()
+    }
+
+    val filteredPatients = remember(textFieldValue, currentPatients) {
+        if (textFieldValue.isBlank()) {
+            currentPatients
+        } else {
+            currentPatients.filter { patient ->
+                val lowerCaseQuery = textFieldValue.lowercase()
+                val matchesName = patient.name.lowercase().contains(lowerCaseQuery)
+                val matchesCpf = patient.cpf?.lowercase()?.contains(lowerCaseQuery) ?: false
+                val matchesEmail = patient.email?.lowercase()?.contains(lowerCaseQuery) ?: false
+                matchesName || matchesCpf || matchesEmail
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Histórico de Consultas", fontWeight = FontWeight.Bold) },
+                title = { Text("Histórico de Prontuários", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
@@ -77,99 +98,110 @@ fun AnalysisHistoryScreen(
             )
         }
     ) { paddingValues ->
-        when (analysisHistoryState) {
-            is AnalysisHistoryUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                    Text("Carregando histórico...", modifier = Modifier.padding(top = 80.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Text(
+                text = "Selecione o paciente para visualizar o prontuário",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+
+            OutlinedTextField(
+                value = textFieldValue,
+                onValueChange = { textFieldValue = it },
+                label = { Text("Filtro") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                singleLine = true
+            )
+
+            when (patientListState) {
+                is PatientListUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                        Text("Carregando prontuários...", modifier = Modifier.padding(top = 80.dp))
+                    }
                 }
-            }
-            is AnalysisHistoryUiState.Loaded -> {
-                val consultations = (analysisHistoryState as AnalysisHistoryUiState.Loaded).consultations
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    if (consultations.isEmpty()) {
-                        item {
-                            Text(
-                                text = "Nenhuma consulta encontrada.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            )
-                        }
+                is PatientListUiState.Loaded -> {
+                    if (filteredPatients.isEmpty()) {
+                        Text(
+                            text = "Nenhum paciente encontrado. Cadastre um paciente.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        )
                     } else {
-                        items(consultations) { consultation ->
-                            AnalysisHistoryListItem(
-                                consultation = consultation,
-                                onClick = {
-                                    consultation.patientDetails?.id?.let { patientId ->
-                                        consultation.id?.let { consultationId ->
-                                            navController.navigate(
-                                                "${AppRoutes.PATIENT_RECORD_BASE}/${patientId}?consultationId=${consultationId}"
-                                            )
-                                        }
-                                    } ?: run {
-                                        Toast.makeText(context, "ID do paciente não encontrado para esta entrada.", Toast.LENGTH_SHORT).show()
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredPatients) { patient ->
+                                PatientHistoryListItem(
+                                    patient = patient,
+                                    onClick = {
+                                        navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patient.id}")
+                                    },
+                                    onDeleteClick = { clickedPatient ->
+                                        patientToDelete = clickedPatient
+                                        showDeleteConfirmationDialog = true
+                                    },
+                                    onEditClick = { patientId ->
+                                        navController.navigate(AppRoutes.PATIENT_REGISTER_WITH_ID.replace("{patientId}", patientId.toString()))
                                     }
-                                },
-                                onDeleteClick = { clickedConsultation ->
-                                    consultationToDelete = clickedConsultation
-                                    showDeleteConfirmationDialog = true
-                                },
-                                onEditClick = { consultationId ->
-                                    // TODO: Implementar navegação para tela de edição de consulta
-                                    Toast.makeText(context, "Editar consulta ${consultationId}", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                            Divider()
+                                )
+                                Divider()
+                            }
                         }
                     }
                 }
-            }
-            is AnalysisHistoryUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = (analysisHistoryState as AnalysisHistoryUiState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                is PatientListUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = (patientListState as PatientListUiState.Error).message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
-            }
-            is AnalysisHistoryUiState.Idle -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("Carregando histórico de consultas...", style = MaterialTheme.typography.bodyLarge)
+                is PatientListUiState.Idle -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Aguardando histórico de prontuários...", style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
         }
     }
 
-    if (showDeleteConfirmationDialog && consultationToDelete != null) {
+    if (showDeleteConfirmationDialog && patientToDelete != null) {
         AlertDialog(
             onDismissRequest = {
                 showDeleteConfirmationDialog = false
-                consultationToDelete = null
+                patientToDelete = null
             },
-            title = { Text("Confirmar Exclusão da Consulta") },
+            title = { Text("Confirmar Exclusão do Paciente") },
             text = {
                 Text(
-                    "Tem certeza que deseja excluir a consulta ${consultationToDelete?.id} " +
-                            "do paciente ${consultationToDelete?.patientDetails?.name ?: "Desconhecido"}?"
+                    "Tem certeza que deseja excluir o paciente ${patientToDelete?.name}?\n\n" +
+                            "ATENÇÃO: Todas as consultas e dados relacionados a este paciente serão PERMANENTEMENTE excluídos."
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        consultationToDelete?.id?.let {
-                            analysisHistoryViewModel.deleteConsultation(it)
+                        patientToDelete?.id?.let {
+                            patientViewModel.deletePatient(it)
                         }
                         showDeleteConfirmationDialog = false
-                        consultationToDelete = null
+                        patientToDelete = null
                     }
                 ) {
                     Text("Excluir")
@@ -179,7 +211,7 @@ fun AnalysisHistoryScreen(
                 TextButton(
                     onClick = {
                         showDeleteConfirmationDialog = false
-                        consultationToDelete = null
+                        patientToDelete = null
                     }
                 ) {
                     Text("Cancelar")
@@ -190,10 +222,10 @@ fun AnalysisHistoryScreen(
 }
 
 @Composable
-fun AnalysisHistoryListItem(
-    consultation: ConsultationResponse,
+fun PatientHistoryListItem(
+    patient: PatientResponse,
     onClick: () -> Unit,
-    onDeleteClick: (ConsultationResponse) -> Unit,
+    onDeleteClick: (PatientResponse) -> Unit,
     onEditClick: (Int) -> Unit
 ) {
     var showActions by remember { mutableStateOf(false) }
@@ -208,34 +240,10 @@ fun AnalysisHistoryListItem(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Paciente: ${consultation.patientDetails?.name ?: "Desconhecido"}",
+                text = patient.name,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Bold
             )
-            val displayDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-
-            val formattedDate = try {
-                apiDateTimeFormat.parse(consultation.dateConsultation)?.let { dateObject ->
-                    displayDateFormat.format(dateObject)
-                }
-            } catch (e: ParseException) {
-                null
-            } catch (e: Exception) {
-                null
-            }
-
-            Text(
-                text = "Data: ${formattedDate ?: "Não informada"}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            consultation.notes?.let { notes ->
-                Text(
-                    text = "Notas: $notes",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
         }
 
         Row {
@@ -250,17 +258,17 @@ fun AnalysisHistoryListItem(
             ) {
                 Row {
                     IconButton(onClick = {
-                        onDeleteClick(consultation)
+                        onDeleteClick(patient)
                         showActions = false
                     }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Excluir consulta")
+                        Icon(Icons.Default.Delete, contentDescription = "Excluir prontuário")
                     }
 
                     IconButton(onClick = {
-                        consultation.id?.let { onEditClick(it) }
+                        patient.id?.let { onEditClick(it) }
                         showActions = false
                     }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar consulta")
+                        Icon(Icons.Default.Edit, contentDescription = "Editar prontuário")
                     }
                 }
             }

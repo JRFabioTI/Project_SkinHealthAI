@@ -10,28 +10,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.compose.rememberNavController
-import com.example.skinhealthai.viewmodel.ImageUploadViewModel
 import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.utils.ImageStorage
 import com.example.skinhealthai.ui.theme.screens.HomeScreen
 import com.example.skinhealthai.viewmodel.LoginViewModel
+// Importe PatientViewModel e ConsultationViewModel se eles forem usados na AppNavigation
+import com.example.skinhealthai.ui.viewmodel.PatientViewModel
+import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
+
 
 object AppRoutes {
     const val SIGNUP = "signup"
     const val LOGIN = "login"
     const val HOME = "home"
     const val PATIENT_LIST = "patient_list"
-    const val ANALYSIS_HISTORY = "analysis_history"
-    const val PATIENT_REGISTER_BASE = "patient_register"
-    const val PATIENT_REGISTER_WITH_ID = "$PATIENT_REGISTER_BASE?patientId={patientId}"
+    const val PATIENT_HISTORY = "patient_history"
+    const val PATIENT_REGISTER = "patient_register" // Esta é a rota base
+    const val PATIENT_REGISTER_WITH_ID = "$PATIENT_REGISTER?patientId={patientId}"
     const val PATIENT_RECORD_BASE = "patient_record"
     const val PATIENT_RECORD_WITH_PATIENT_ID = "$PATIENT_RECORD_BASE/{patientId}"
-    const val PATIENT_RECORD_WITH_PATIENT_ID_AND_CONSULTATION_ID = "$PATIENT_RECORD_WITH_PATIENT_ID?consultationId={consultationId}"
     const val IMAGE_GALLERY = "image_gallery"
     const val SCAN_IMAGE_BASE = "scan_image"
     const val SCAN_IMAGE_WITH_INDEX = "$SCAN_IMAGE_BASE/{index}"
     const val CONSULTATION_SCREEN_BASE = "consultation_screen"
-    const val CONSULTATION_SCREEN_WITH_PATIENT_ID = "$CONSULTATION_SCREEN_BASE/{patientId}"
+    val CONSULTATION_SCREEN_WITH_PATIENT_ID = "$CONSULTATION_SCREEN_BASE/{patientId}"
 }
 
 @Composable
@@ -72,8 +74,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             )
         }
 
-        composable(AppRoutes.ANALYSIS_HISTORY) {
-            AnalysisHistoryScreen(navController = navController)
+        composable(AppRoutes.PATIENT_HISTORY) {
+            PatientHistoryScreen(
+                navController = navController,
+            )
         }
 
         composable(
@@ -90,27 +94,28 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             )
         }
 
+        composable(AppRoutes.PATIENT_REGISTER) {
+            PatientRegisterScreen(
+                navController = navController,
+                patientId = null
+            )
+        }
+
         composable(
-            route = AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID_AND_CONSULTATION_ID,
+            route = AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID,
             arguments = listOf(
                 navArgument("patientId") {
                     type = NavType.IntType
                     nullable = false
-                },
-                navArgument("consultationId") {
-                    type = NavType.IntType
-                    defaultValue = -1
                 }
             )
         ) { backStackEntry ->
             val patientId = backStackEntry.arguments?.getInt("patientId")
-            val consultationId = backStackEntry.arguments?.getInt("consultationId")
 
             if (patientId != null) {
                 PatientRecordScreen(
                     navController = navController,
                     patientId = patientId,
-                    consultationId = if (consultationId == -1) null else consultationId
                 )
             } else {
                 Text("Erro: ID do paciente não encontrado para o prontuário.")

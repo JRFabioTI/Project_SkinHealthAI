@@ -32,8 +32,7 @@ import androidx.navigation.NavHostController
 import com.example.skinhealthai.ui.components.FeatureCard
 import com.example.skinhealthai.ui.components.TopBarLoggedIn
 import com.example.skinhealthai.viewmodel.LoginViewModel
-
-
+import com.example.skinhealthai.ui.screens.AppRoutes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -67,15 +66,15 @@ fun HomeScreen(
 
             item {
                 FeaturesSection(
-                    onCadastrarPacienteClick = { navController.navigate("patient_register") },
-                    onNovaConsultaClick = { navController.navigate("patient_list") },
-                    onHistoricoClick = { navController.navigate("analysis_history") }
+                    onCadastrarPacienteClick = { navController.navigate(AppRoutes.PATIENT_REGISTER) },
+                    onNovaConsultaClick = { navController.navigate(AppRoutes.PATIENT_LIST) },
+                    onHistoricoClick = { navController.navigate(AppRoutes.PATIENT_HISTORY) }
                 )
             }
 
             item {
                 TextButton(
-                    onClick = { navController.navigate("patient_list") },
+                    onClick = { navController.navigate(AppRoutes.PATIENT_LIST) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -131,11 +130,10 @@ fun FeaturesSection(
             onClick = onNovaConsultaClick
         )
         FeatureCard(
-            title = "Histórico de Consultas ",
-            description = "Veja consultas e o prontuário do seu paciente",
+            title = "Histórico de Prontuários",
+            description = "Veja o histórico de todos os prontuários de seus pacientes",
             onClick = onHistoricoClick
         )
-
     }
 }
 

@@ -6,8 +6,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,9 +47,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import com.example.skinhealthai.ui.viewmodel.DeletePatientUiState
 import com.example.skinhealthai.ui.viewmodel.PatientViewModel
-import androidx.compose.foundation.layout.Spacer // Adicionar este import
-import androidx.compose.foundation.layout.height // Adicionar este import
-import androidx.compose.ui.Alignment // Adicionar este import caso queira centralizar o texto
+import com.example.skinhealthai.ui.viewmodel.PatientListUiState
+import androidx.compose.ui.Alignment
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +59,7 @@ fun PatientListScreen(
     var textFieldValue by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    val patientList by patientViewModel.patientList.collectAsState()
+    val patientListState by patientViewModel.patientList.collectAsState()
     val deleteState by patientViewModel.deleteState.collectAsState()
 
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
@@ -83,11 +85,16 @@ fun PatientListScreen(
         }
     }
 
-    val filteredPatients = remember(textFieldValue, patientList) {
+    val currentPatients: List<PatientResponse> = when (patientListState) {
+        is PatientListUiState.Loaded -> (patientListState as PatientListUiState.Loaded).patients
+        else -> emptyList()
+    }
+
+    val filteredPatients = remember(textFieldValue, currentPatients) {
         if (textFieldValue.isBlank()) {
-            patientList
+            currentPatients
         } else {
-            patientList.filter { patient ->
+            currentPatients.filter { patient ->
                 val lowerCaseQuery = textFieldValue.lowercase()
                 val matchesName = patient.name.lowercase().contains(lowerCaseQuery)
                 val matchesCpf = patient.cpf?.lowercase()?.contains(lowerCaseQuery) ?: false
@@ -133,9 +140,15 @@ fun PatientListScreen(
                 singleLine = true
             )
 
-            LazyColumn {
-                if (filteredPatients.isEmpty()) {
-                    item {
+            when (patientListState) {
+                is PatientListUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                        Text("Carregando pacientes...", modifier = Modifier.padding(top = 80.dp))
+                    }
+                }
+                is PatientListUiState.Loaded -> {
+                    if (filteredPatients.isEmpty()) {
                         Text(
                             text = "Nenhum paciente encontrado. Cadastre um paciente",
                             style = MaterialTheme.typography.bodyLarge,
@@ -143,23 +156,40 @@ fun PatientListScreen(
                                 .fillMaxWidth()
                                 .padding(16.dp)
                         )
-                    }
-                } else {
-                    items(filteredPatients) { patient ->
-                        PatientListItem(
-                            patient = patient,
-                            onClick = {
-                                navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${patient.id}")
-                            },
-                            onDeleteClick = { clickedPatient ->
-                                patientToDelete = clickedPatient
-                                showDeleteConfirmationDialog = true
-                            },
-                            onEditClick = { patientId ->
-                                navController.navigate("${AppRoutes.PATIENT_REGISTER_BASE}?patientId=${patientId}")
+                    } else {
+                        LazyColumn {
+                            items(filteredPatients) { patient ->
+                                PatientListItem(
+                                    patient = patient,
+                                    onClick = {
+                                        navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${patient.id}")
+                                    },
+                                    onDeleteClick = { clickedPatient ->
+                                        patientToDelete = clickedPatient
+                                        showDeleteConfirmationDialog = true
+                                    },
+                                    onEditClick = { patientId ->
+                                        navController.navigate(AppRoutes.PATIENT_REGISTER_WITH_ID.replace("{patientId}", patientId.toString()))
+                                    }
+                                )
+                                Divider()
                             }
+                        }
+                    }
+                }
+                is PatientListUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = (patientListState as PatientListUiState.Error).message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(16.dp)
                         )
-                        Divider()
+                    }
+                }
+                is PatientListUiState.Idle -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Aguardando carregamento de pacientes...", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
