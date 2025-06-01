@@ -245,6 +245,10 @@ fun PatientRecordScreen(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }
+                // --- AQUI ESTÁ A CORREÇÃO ---
+                is PatientDataUiState.Idle -> {
+                    Text("Aguardando o carregamento dos dados do paciente...", modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
             }
         }
     }

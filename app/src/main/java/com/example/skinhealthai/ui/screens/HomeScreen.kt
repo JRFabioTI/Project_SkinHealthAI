@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.skinhealthai.data.model.Patient
 import com.example.skinhealthai.data.samplePatients
@@ -51,20 +53,24 @@ import com.example.skinhealthai.ui.components.modals.PatientRegisterModal
 import com.example.skinhealthai.ui.screens.CameraCapture
 import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.viewmodel.ImageUploadViewModel
+import com.example.skinhealthai.viewmodel.LoginViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    imageViewModel: ImageUploadViewModel,
+    loginViewModel: LoginViewModel = viewModel(),
 ) {
+
+    val userName by loginViewModel.loggedInUserName.collectAsState()
 
     Scaffold(
         topBar = {
             TopBarLoggedIn(
-                userName = "Dr. Médico",
+                userName = userName ?: "Usuário",
                 onLogout = {
+                    loginViewModel.logout()
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
@@ -79,7 +85,7 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            item { WelcomeHeader("Dr(a). Médico") }
+            item { WelcomeHeader(userName ?: "Usuário") }
 
             item {
                 FeaturesSection(

@@ -1,3 +1,4 @@
+// com.example.skinhealthai.viewmodel/LoginViewModel.kt
 package com.example.skinhealthai.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -23,16 +24,26 @@ class LoginViewModel(
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
     val loginState: StateFlow<LoginState> = _loginState
 
+    private val _loggedInUserName = MutableStateFlow<String?>(null)
+    val loggedInUserName: StateFlow<String?> = _loggedInUserName
+
     fun login(email: String, password: String) {
         _loginState.value = LoginState.Loading
         viewModelScope.launch {
             try {
                 val user = repository.login(UserLoginRequest(email, password))
+                _loggedInUserName.value = user.userName
                 _loginState.value = LoginState.Success(user)
             } catch (e: Exception) {
+                // CORREÇÃO AQUI: Era _loggedInState, deve ser _loginState
                 _loginState.value = LoginState.Error(e.message ?: "Erro desconhecido")
             }
         }
+    }
+
+    fun logout() {
+        _loggedInUserName.value = null
+        _loginState.value = LoginState.Idle // Reinicia o estado de login
     }
 
     fun resetState() {

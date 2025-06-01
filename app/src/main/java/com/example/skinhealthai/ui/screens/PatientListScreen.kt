@@ -1,6 +1,11 @@
 package com.example.skinhealthai.ui.screens
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -17,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,54 +37,62 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-// REMOVIDO: import com.example.skinhealthai.data.samplePatients
-// REMOVIDO: import com.example.skinhealthai.data.model.Patient // Usaremos PatientResponse
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel // Importe viewModel
-import com.example.skinhealthai.viewmodel.ImageUploadViewModel
-import com.example.skinhealthai.data.model.PatientResponse // Importe PatientResponse
-import androidx.compose.runtime.LaunchedEffect // Importe LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.skinhealthai.data.model.PatientResponse
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import com.example.skinhealthai.ui.viewmodel.DeletePatientUiState
 import com.example.skinhealthai.ui.viewmodel.PatientViewModel
+
+// Note: A classe AppRoutes deve estar em um arquivo separado, por exemplo, AppNavigation.kt
+// ou na sua MainActivity, se for o caso. Não a redeclara aqui.
+// Assumindo que AppRoutes está acessível, caso contrário adicione o import necessário.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientListScreen(
     navController: NavHostController,
-    patientViewModel: PatientViewModel = viewModel() // Injete PatientViewModel
+    patientViewModel: PatientViewModel = viewModel()
 ) {
     var textFieldValue by remember { mutableStateOf("") }
-    var showCamera by remember { mutableStateOf(false) }
-    var selectedPatientId by remember { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
 
-    // Observe a lista de pacientes do ViewModel
     val patientList by patientViewModel.patientList.collectAsState()
+    val deleteState by patientViewModel.deleteState.collectAsState()
 
-    // Acione a busca de pacientes quando a tela é composta pela primeira vez
+    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+    var patientToDelete by remember { mutableStateOf<PatientResponse?>(null) }
+
+
     LaunchedEffect(Unit) {
         patientViewModel.fetchPatients()
     }
 
-    // FILTRO MELHORADO PARA INCLUIR NOME, CPF E EMAIL
+    LaunchedEffect(deleteState) {
+        when (deleteState) {
+            is DeletePatientUiState.Success -> {
+                Toast.makeText(context, "Paciente excluído com sucesso!", Toast.LENGTH_SHORT).show()
+                patientViewModel.resetDeleteState()
+            }
+            is DeletePatientUiState.Error -> {
+                val errorMessage = (deleteState as DeletePatientUiState.Error).message
+                Toast.makeText(context, "Erro ao excluir: $errorMessage", Toast.LENGTH_LONG).show()
+                patientViewModel.resetDeleteState()
+            }
+            else -> { /* Não fazer nada para Idle ou Loading */ }
+        }
+    }
+
     val filteredPatients = remember(textFieldValue, patientList) {
         if (textFieldValue.isBlank()) {
             patientList
         } else {
             patientList.filter { patient ->
-                // Converte o termo de busca para minúsculas uma vez para comparação case-insensitive
                 val lowerCaseQuery = textFieldValue.lowercase()
-
-                // Verifica se o nome contém o termo
                 val matchesName = patient.name.lowercase().contains(lowerCaseQuery)
-
-                // Verifica se o CPF contém o termo (se o CPF não for nulo)
                 val matchesCpf = patient.cpf?.lowercase()?.contains(lowerCaseQuery) ?: false
-
-                // Verifica se o email contém o termo (se o email não for nulo)
                 val matchesEmail = patient.email?.lowercase()?.contains(lowerCaseQuery) ?: false
-
-                // Retorna true se corresponder a qualquer um dos campos
                 matchesName || matchesCpf || matchesEmail
             }
         }
@@ -123,8 +141,18 @@ fun PatientListScreen(
                         PatientListItem(
                             patient = patient,
                             onClick = {
-                                selectedPatientId = patient.id
-                                navController.navigate("consultation_screen/${patient.id}")
+                                // Navega para a tela de consulta
+                                // Certifique-se que CONSULTATION_SCREEN_WITH_PATIENT_ID está definida corretamente em AppRoutes
+                                navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${patient.id}")
+                            },
+                            onDeleteClick = { clickedPatient ->
+                                patientToDelete = clickedPatient
+                                showDeleteConfirmationDialog = true
+                            },
+                            onEditClick = { patientId ->
+                                // AQUI ESTÁ A CORREÇÃO CRÍTICA PARA A NAVEGAÇÃO DE EDIÇÃO
+                                // Use a rota exata definida em AppRoutes
+                                navController.navigate("${AppRoutes.PATIENT_REGISTER_BASE}?patientId=${patientId}")
                             }
                         )
                         Divider()
@@ -134,26 +162,70 @@ fun PatientListScreen(
         }
     }
 
+    if (showDeleteConfirmationDialog && patientToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmationDialog = false
+                patientToDelete = null
+            },
+            title = { Text("Confirmar Exclusão") },
+            text = {
+                Text(
+                    "Tem certeza que deseja excluir o paciente ${patientToDelete?.name}?\n\n" +
+                            "AVISO: Todas as consultas relacionadas a este paciente também serão excluídas."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        patientToDelete?.id?.let {
+                            patientViewModel.deletePatient(it)
+                        }
+                        showDeleteConfirmationDialog = false
+                        patientToDelete = null
+                    }
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmationDialog = false
+                        patientToDelete = null
+                    }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun PatientListItem(
-    patient: PatientResponse, // Agora espera PatientResponse
-    onClick: () -> Unit
+    patient: PatientResponse,
+    onClick: () -> Unit,
+    onDeleteClick: (PatientResponse) -> Unit,
+    onEditClick: (Int) -> Unit
 ) {
+    var showActions by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 12.dp)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
                 text = patient.name,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Light
             )
-            // CPF é um bom identificador para exibir na lista
             patient.cpf?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = "CPF: $it",
@@ -167,6 +239,34 @@ fun PatientListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        Row {
+            IconButton(onClick = { showActions = !showActions }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "Mais opções")
+            }
+
+            AnimatedVisibility(
+                visible = showActions,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Row {
+                    IconButton(onClick = {
+                        onDeleteClick(patient)
+                        showActions = false
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Excluir paciente")
+                    }
+
+                    IconButton(onClick = {
+                        patient.id?.let { onEditClick(it) }
+                        showActions = false
+                    }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar paciente")
+                    }
+                }
             }
         }
     }

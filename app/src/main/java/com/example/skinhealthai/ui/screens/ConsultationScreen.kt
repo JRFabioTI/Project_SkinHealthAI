@@ -19,25 +19,10 @@ import com.example.skinhealthai.data.model.ConsultationRequest
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
 import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
 import com.example.skinhealthai.ui.viewmodel.ConsultationCreationState
-// FileUtils e classes relacionadas à câmera não são mais necessários se não for tirar foto aqui
-// import com.example.skinhealthai.utils.FileUtils
-// import android.graphics.Bitmap
-// import android.net.Uri
-// import androidx.core.content.FileProvider
-// import android.Manifest
-// import android.content.pm.PackageManager
-// import androidx.activity.compose.rememberLauncherForActivityResult
-// import androidx.activity.result.contract.ActivityResultContracts
-// import androidx.core.content.ContextCompat
-
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-// Removida a assunção de CameraCapture, pois não será usada
-// @Composable
-// fun CameraCapture(onImageCaptured: (Bitmap?) -> Unit) { /* ... */ }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,23 +33,13 @@ fun ConsultationScreen(
 ) {
     val context = LocalContext.current
 
-    // Estados para os campos da consulta
     var consultationDate by remember { mutableStateOf(SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())) }
-    // photoUri não é mais necessário aqui se a foto não for tirada nesta tela
-    // var photoUri by remember { mutableStateOf<Uri?>(null) }
-    var photoLocationDescription by remember { mutableStateOf("") } // Estado para a descrição do local da foto
+    var photoLocationDescription by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
-    // Estados e Launchers de câmera removidos
-    // var showCamera by remember { mutableStateOf(false) }
-    // val cameraPermissionState = remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
-    // val permissionLauncher = rememberLauncherForActivityResult(...)
-
-    // Observa os estados do ViewModel
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val consultationCreationState by consultationViewModel.consultationCreationState.collectAsState()
 
-    // Carrega os dados do paciente ao iniciar a tela
     LaunchedEffect(patientId) {
         if (patientId != null) {
             consultationViewModel.loadPatient(patientId)
@@ -74,29 +49,28 @@ fun ConsultationScreen(
         }
     }
 
-    // Reage ao estado de criação da consulta
     LaunchedEffect(consultationCreationState) {
         when (consultationCreationState) {
             is ConsultationCreationState.Success -> {
                 Toast.makeText(context, "Consulta registrada com sucesso!", Toast.LENGTH_SHORT).show()
-                // Limpa os campos após o sucesso
                 consultationDate = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-                // photoUri = null // Não necessário
-                photoLocationDescription = "" // Limpa o campo
+                photoLocationDescription = ""
                 notes = ""
-                // Navega para a tela de prontuário, mas agora SEM a photoUri
-                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") // <-- Rota modificada
+                // --- CORREÇÃO AQUI: Navegação para a rota unificada do prontuário ---
+                // Passamos apenas o patientId, o consultationId será nulo por padrão na PatientRecordScreen
+                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}?patientId=${patientId}")
                 consultationViewModel.resetConsultationCreationState()
             }
             is ConsultationCreationState.Error -> {
                 Toast.makeText(context, (consultationCreationState as ConsultationCreationState.Error).message, Toast.LENGTH_LONG).show()
                 consultationViewModel.resetConsultationCreationState()
             }
-            else -> {}
+            ConsultationCreationState.Idle, ConsultationCreationState.Loading -> {
+                // Não é necessário Toast ou navegação aqui, pois a UI já trata Loading no botão
+            }
         }
     }
 
-    // O bloco 'if (showCamera)' e 'else' foi removido, agora é sempre o conteúdo da tela de consulta
     Scaffold(
         topBar = {
             TopAppBar(
@@ -117,7 +91,6 @@ fun ConsultationScreen(
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Exibir informações do paciente
             when (patientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -139,7 +112,6 @@ fun ConsultationScreen(
                     Text("Dados da Consulta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Campos de input para a consulta
                     OutlinedTextField(
                         value = consultationDate,
                         onValueChange = { consultationDate = it },
@@ -149,17 +121,10 @@ fun ConsultationScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Botão "Tirar Foto" removido
-                    // Button(onClick = { ... }) { Text("Tirar Foto") }
-
-                    // Texto "Foto capturada: ..." removido
-                    // photoUri?.let { uri -> Text("Foto capturada: ${uri.lastPathSegment ?: "Imagem"}", style = MaterialTheme.typography.bodyMedium) }
-
-                    // Campo para a descrição do local da foto
                     OutlinedTextField(
                         value = photoLocationDescription,
                         onValueChange = { photoLocationDescription = it },
-                        label = { Text("Local da Foto / Descrição da Lesão (Opcional)") }, // Label mais descritivo e indica opcional
+                        label = { Text("Local da Foto / Descrição da Lesão (Opcional)") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -191,7 +156,7 @@ fun ConsultationScreen(
                                 Toast.makeText(context, "Formato de data/hora inválido. Use dd/MM/yyyy HH:mm", Toast.LENGTH_LONG).show()
                                 null
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Erro ao processar data/hora da consulta.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Erro ao processar data/hora da consulta: ${e.message}", Toast.LENGTH_LONG).show()
                                 null
                             }
 
@@ -202,8 +167,7 @@ fun ConsultationScreen(
                             val consultationRequest = ConsultationRequest(
                                 patientId = patient.id,
                                 dateConsultation = formattedConsultationDate,
-                                // Envia a descrição do local da foto apenas se não estiver vazia
-                                photoLocation = photoLocationDescription.takeIf { it.isNotBlank() }, // Não usa photoUri
+                                photoLocation = photoLocationDescription.takeIf { it.isNotBlank() },
                                 notes = notes.takeIf { it.isNotBlank() }
                             )
                             consultationViewModel.createConsultation(consultationRequest)
@@ -225,6 +189,9 @@ fun ConsultationScreen(
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
+                }
+                is PatientDataUiState.Idle -> {
+                    Text("Aguardando dados do paciente...", modifier = Modifier.align(Alignment.CenterHorizontally))
                 }
             }
         }

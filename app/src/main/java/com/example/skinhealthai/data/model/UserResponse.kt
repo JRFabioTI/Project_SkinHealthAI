@@ -8,6 +8,8 @@ data class UserResponse(
     val id: Int? = null, // Torne nullable se não tiver certeza se sempre virá
     val email: String? = null, // Torne nullable se não tiver certeza se sempre virá
     val token: String,
+    @SerializedName("user_name")
+    val userName: String? = null,
     @SerializedName("refresh")
     val refreshToken: String, // Mapeia o campo "refresh" do JSON
 
