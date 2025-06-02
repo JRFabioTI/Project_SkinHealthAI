@@ -21,9 +21,6 @@ fun TopBarLoggedIn(userName: String, onLogout: () -> Unit) {
             Text("SkinHealthAI", fontWeight = FontWeight.Bold)
         },
         actions = {
-            IconButton(onClick = {  }) {
-                Icon(Icons.Filled.Notifications, contentDescription = "Notificações")
-            }
             Box {
                 TextButton(onClick = { showMenu = !showMenu }) {
                     Text(

@@ -33,6 +33,7 @@ import com.example.skinhealthai.ui.viewmodel.PatientConsultationsUiState
 import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -91,7 +92,7 @@ fun PatientRecordScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         navController.navigate(AppRoutes.HOME) {
-                            popUpTo(AppRoutes.HOME) { inclusive = true } // Limpa a pilha até a Home
+                            popUpTo(AppRoutes.HOME) { inclusive = true }
                         }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar para Home")
@@ -136,9 +137,28 @@ fun PatientRecordScreen(
                         )
                     }
 
+                    patient.gender?.let { genderValue ->
+                        val fullGenderText = when(genderValue.uppercase(Locale.getDefault())) {
+                            "M", "MASCULINO" -> "Masculino"
+                            "F", "FEMININO" -> "Feminino"
+                            "O", "OUTRO" -> "Outro"
+                            else -> genderValue
+                        }
+                        Text(
+                            text = "Gênero: $fullGenderText",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } ?: run {
+                        Text(
+                            text = "Gênero: Não informado",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     patient.date_of_birth?.let { apiDateString ->
                         val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato da API
 
                         val formattedDate = try {
                             apiFormat.parse(apiDateString)?.let { dateObject ->
@@ -147,8 +167,9 @@ fun PatientRecordScreen(
                         } catch (e: ParseException) { null } catch (e: Exception) { null }
 
                         if (formattedDate != null) {
+                            val age = calculateAge(apiDateString, apiFormat)
                             Text(
-                                text = "Data de Nascimento: $formattedDate",
+                                text = "Data de Nascimento: $formattedDate (Idade: ${age ?: "N/A"})",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         } else {
@@ -165,6 +186,7 @@ fun PatientRecordScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
                     patient.cellphone?.let {
                         Text(
                             text = "Telefone: $it",
@@ -390,5 +412,21 @@ fun PatientRecordScreen(
                 }
             }
         )
+    }
+}
+
+fun calculateAge(dobString: String, dateFormat: SimpleDateFormat): String? {
+    return try {
+        val dob = dateFormat.parse(dobString) ?: return null
+        val dobCalendar = Calendar.getInstance().apply { time = dob }
+        val todayCalendar = Calendar.getInstance()
+
+        var age = todayCalendar.get(Calendar.YEAR) - dobCalendar.get(Calendar.YEAR)
+        if (todayCalendar.get(Calendar.DAY_OF_YEAR) < dobCalendar.get(Calendar.DAY_OF_YEAR)) {
+            age--
+        }
+        "$age anos"
+    } catch (e: Exception) {
+        null
     }
 }

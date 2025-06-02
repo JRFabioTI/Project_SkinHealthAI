@@ -23,8 +23,12 @@ import com.example.skinhealthai.ui.viewmodel.SingleConsultationUiState
 import com.example.skinhealthai.ui.viewmodel.UpdateConsultationUiState
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.Calendar // Importar Calendar para cálculo de idade
 import java.util.Date
 import java.util.Locale
+
+// Certifique-se de ter importado AppRoutes
+import com.example.skinhealthai.ui.screens.AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +124,7 @@ fun ConsultationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Editar Consulta" else "Registrar Nova Consulta", fontWeight = FontWeight.Bold) }, // Título dinâmico
+                title = { Text(if (isEditing) "Editar Consulta" else "Registrar Nova Consulta", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
@@ -164,11 +168,50 @@ fun ConsultationScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
-                    patient.date_of_birth?.let {
+
+                    // --- EXIBIR GÊNERO E IDADE ---
+                    patient.gender?.let { genderCode ->
+                        val fullGender = when(genderCode.uppercase(Locale.getDefault())) {
+                            "M", "MASCULINO" -> "Masculino"
+                            "F", "FEMININO" -> "Feminino"
+                            "O", "OUTRO" -> "Outro"
+                            else -> genderCode // Se não for reconhecido, mostra o valor original
+                        }
                         Text(
-                            text = "Data de Nascimento: $it",
+                            text = "Gênero: $fullGender",
                             style = MaterialTheme.typography.bodyMedium
                         )
+                    } ?: run {
+                        Text(
+                            text = "Gênero: Não informado",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    patient.date_of_birth?.let { apiDateString ->
+                        val apiDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato que a API retorna
+                        val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato para exibição
+
+                        val formattedDate = try {
+                            apiDateFormat.parse(apiDateString)?.let { dateObject ->
+                                displayDateFormat.format(dateObject)
+                            }
+                        } catch (e: ParseException) { null } catch (e: Exception) { null }
+
+                        if (formattedDate != null) {
+                            val age = calculateAge2(apiDateString, apiDateFormat) // Usar apiDateFormat para cálculo
+                            Text(
+                                text = "Data de Nascimento: $formattedDate (Idade: ${age ?: "N/A"})",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Text(
+                                text = "Data de Nascimento: Não informada",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } ?: run {
                         Text(
                             text = "Data de Nascimento: Não informada",
@@ -176,11 +219,12 @@ fun ConsultationScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    // --- FIM EXIBIR GÊNERO E IDADE ---
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (isEditing) "Dados para Edição" else "Dados da Consulta", // Título dinâmico
+                        text = if (isEditing) "Dados para Edição" else "Dados da Consulta",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -220,7 +264,7 @@ fun ConsultationScreen(
                                 return@Button
                             }
 
-                            val apiDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
+                            val apiDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Ajuste para 'X' se necessário
                             val formattedConsultationDate: String? = try {
                                 val inputFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                                 inputFormat.isLenient = false
@@ -280,5 +324,22 @@ fun ConsultationScreen(
                 }
             }
         }
+    }
+}
+
+// --- Função auxiliar para calcular idade (se não estiver já em um arquivo utilitário) ---
+fun calculateAge2(dobString: String, dateFormat: SimpleDateFormat): String? {
+    return try {
+        val dob = dateFormat.parse(dobString) ?: return null
+        val dobCalendar = Calendar.getInstance().apply { time = dob }
+        val todayCalendar = Calendar.getInstance()
+
+        var age = todayCalendar.get(Calendar.YEAR) - dobCalendar.get(Calendar.YEAR)
+        if (todayCalendar.get(Calendar.DAY_OF_YEAR) < dobCalendar.get(Calendar.DAY_OF_YEAR)) {
+            age--
+        }
+        "$age anos"
+    } catch (e: Exception) {
+        null
     }
 }

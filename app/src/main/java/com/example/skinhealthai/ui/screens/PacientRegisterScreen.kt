@@ -21,6 +21,7 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.compose.ui.Alignment
+// ... (seus imports)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +35,7 @@ fun PatientRegisterScreen(
     var name by remember { mutableStateOf("") }
     var birthDate by remember { mutableStateOf("") }
     var genderExpanded by remember { mutableStateOf(false) }
-    var selectedGender by remember { mutableStateOf<String?>(null) }
+    var selectedGender by remember { mutableStateOf<String?>(null) } // Guarda o texto completo (Masculino, Feminino, Outro)
     var phone by remember { mutableStateOf("") }
     var cpf by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -44,12 +45,13 @@ fun PatientRegisterScreen(
     var genderError by remember { mutableStateOf(false) }
     var cpfError by remember { mutableStateOf(false) }
 
-    val genderOptions = listOf("Masculino", "Feminino", "Outro")
+    val genderOptions = listOf("Masculino", "Feminino", "Outro") // Opções de exibição no dropdown
     val registerState by viewModel.registerState.collectAsState()
     val selectedPatientState by viewModel.selectedPatient.collectAsState()
     val isEditing = patientId != null
 
     LaunchedEffect(patientId) {
+        // Resetar estados e campos ao carregar um novo paciente/entrar no modo de criação
         name = ""
         birthDate = ""
         selectedGender = null
@@ -60,10 +62,10 @@ fun PatientRegisterScreen(
         birthDateError = false
         genderError = false
         cpfError = false
-        viewModel.resetSelectedPatientState()
+        viewModel.resetSelectedPatientState() // Limpa o estado do paciente selecionado no ViewModel
 
         if (isEditing && patientId != null) {
-            viewModel.fetchPatientById(patientId)
+            viewModel.fetchPatientById(patientId) // Busca os dados do paciente para edição
         }
     }
 
@@ -78,7 +80,7 @@ fun PatientRegisterScreen(
 
                     try {
                         displayFormat.parse(apiDateString)
-                        birthDate = apiDateString
+                        birthDate = apiDateString // Se a API já retorna dd/MM/yyyy
                     } catch (e: ParseException) {
                         try {
                             val apiFormatAlt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -95,12 +97,21 @@ fun PatientRegisterScreen(
                     }
                 }
 
-                selectedGender = when (patient.gender?.uppercase(Locale.getDefault())) {
+                // --- CORREÇÃO AQUI para pré-selecionar o GÊNERO ---
+                // A API retorna "Masculino", "Feminino", "Outro".
+                // Mapeie esse texto para a opção do seu dropdown.
+                selectedGender = when (patient.gender) {
+                    "Masculino" -> "Masculino"
+                    "Feminino" -> "Feminino"
+                    "Outro" -> "Outro"
+                    // Adicione aqui se a API puder retornar as siglas "M", "F", "O" na leitura
                     "M" -> "Masculino"
                     "F" -> "Feminino"
                     "O" -> "Outro"
-                    else -> null
+                    else -> null // Se for algo diferente, não seleciona nada
                 }
+                // --- FIM CORREÇÃO GÊNERO ---
+
                 phone = patient.cellphone ?: ""
                 cpf = patient.cpf ?: ""
                 email = patient.email ?: ""
@@ -108,6 +119,7 @@ fun PatientRegisterScreen(
             is SinglePatientUiState.Error -> {
                 val errorMessage = (selectedPatientState as SinglePatientUiState.Error).message
                 Toast.makeText(context, "Erro ao carregar paciente: $errorMessage", Toast.LENGTH_LONG).show()
+                navController.popBackStack() // Volta se não conseguir carregar o paciente
             }
             is SinglePatientUiState.Loading -> { /* Opcional: Mostrar um indicador de carregamento */ }
             is SinglePatientUiState.Idle -> { /* Nada a fazer, estado inicial */ }
@@ -181,7 +193,7 @@ fun PatientRegisterScreen(
                 onExpandedChange = { genderExpanded = !genderExpanded }
             ) {
                 OutlinedTextField(
-                    value = selectedGender ?: "",
+                    value = selectedGender ?: "", // Usa selectedGender aqui
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Gênero") },
@@ -196,11 +208,11 @@ fun PatientRegisterScreen(
                     expanded = genderExpanded,
                     onDismissRequest = { genderExpanded = false }
                 ) {
-                    genderOptions.forEach { gender ->
+                    genderOptions.forEach { genderText -> // genderText é o texto completo do dropdown
                         DropdownMenuItem(
-                            text = { Text(gender) },
+                            text = { Text(genderText) },
                             onClick = {
-                                selectedGender = gender
+                                selectedGender = genderText // selectedGender agora é o texto completo
                                 genderExpanded = false
                                 genderError = false
                             }
@@ -243,7 +255,6 @@ fun PatientRegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            //Spacer(modifier = Modifier.weight(1f))
             Spacer(modifier = Modifier.height(27.dp))
 
             Button(
@@ -258,12 +269,14 @@ fun PatientRegisterScreen(
                         return@Button
                     }
 
-                    val genderCode = when (selectedGender?.lowercase(Locale.getDefault())) {
-                        "masculino" -> "M"
-                        "feminino" -> "F"
-                        "outro" -> "O"
-                        else -> null
+                    // --- CORREÇÃO AQUI: Mapear o TEXTO COMPLETO para a SIGLA para a API ---
+                    val genderCodeForApi = when (selectedGender) {
+                        "Masculino" -> "M"
+                        "Feminino" -> "F"
+                        "Outro" -> "O"
+                        else -> null // Deve ser tratado como erro de validação se for obrigatório
                     }
+                    // --- FIM CORREÇÃO ---
 
                     val formattedDateForApi = try {
                         if (birthDate.isNotEmpty()) {
@@ -288,7 +301,7 @@ fun PatientRegisterScreen(
                     val patientRequest = PatientRequest(
                         name = name,
                         date_of_birth = formattedDateForApi,
-                        gender = genderCode,
+                        gender = genderCodeForApi, // ENVIANDO A SIGLA PARA A API
                         cellphone = phone.takeIf { it.isNotBlank() },
                         cpf = cpf.takeIf { it.isNotBlank() },
                         email = email.takeIf { it.isNotBlank() }
