@@ -23,12 +23,9 @@ import com.example.skinhealthai.ui.viewmodel.SingleConsultationUiState
 import com.example.skinhealthai.ui.viewmodel.UpdateConsultationUiState
 import java.text.ParseException
 import java.text.SimpleDateFormat
-import java.util.Calendar // Importar Calendar para cálculo de idade
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
-// Certifique-se de ter importado AppRoutes
-import com.example.skinhealthai.ui.screens.AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,7 +126,10 @@ fun ConsultationScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                )
             )
         }
     ) { paddingValues ->
@@ -169,13 +169,12 @@ fun ConsultationScreen(
                         )
                     }
 
-                    // --- EXIBIR GÊNERO E IDADE ---
                     patient.gender?.let { genderCode ->
                         val fullGender = when(genderCode.uppercase(Locale.getDefault())) {
                             "M", "MASCULINO" -> "Masculino"
                             "F", "FEMININO" -> "Feminino"
                             "O", "OUTRO" -> "Outro"
-                            else -> genderCode // Se não for reconhecido, mostra o valor original
+                            else -> genderCode
                         }
                         Text(
                             text = "Gênero: $fullGender",
@@ -190,8 +189,8 @@ fun ConsultationScreen(
                     }
 
                     patient.date_of_birth?.let { apiDateString ->
-                        val apiDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato que a API retorna
-                        val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato para exibição
+                        val apiDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
                         val formattedDate = try {
                             apiDateFormat.parse(apiDateString)?.let { dateObject ->
@@ -219,7 +218,6 @@ fun ConsultationScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    // --- FIM EXIBIR GÊNERO E IDADE ---
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -327,7 +325,6 @@ fun ConsultationScreen(
     }
 }
 
-// --- Função auxiliar para calcular idade (se não estiver já em um arquivo utilitário) ---
 fun calculateAge2(dobString: String, dateFormat: SimpleDateFormat): String? {
     return try {
         val dob = dateFormat.parse(dobString) ?: return null
