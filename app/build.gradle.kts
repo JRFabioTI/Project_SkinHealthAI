@@ -60,6 +60,9 @@ dependencies {
     // Kotlinx Serialization (se for usar com Retrofit + converter-kotlinx)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
+    // Configuração minio
+    implementation("io.minio:minio:8.5.1")
+
     // Compose
     implementation("androidx.activity:activity-compose:1.8.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
