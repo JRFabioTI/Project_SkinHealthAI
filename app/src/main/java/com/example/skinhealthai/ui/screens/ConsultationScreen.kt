@@ -1,6 +1,8 @@
 package com.example.skinhealthai.ui.screens
 
+import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -27,6 +29,15 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+// Imports adicionais para o scroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+
+// Importar a classe FileUtils
+import com.example.skinhealthai.utils.FileUtils
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConsultationScreen(
@@ -42,12 +53,21 @@ fun ConsultationScreen(
     var photoLocationDescription by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
+    // Estado para controlar a visibilidade da câmera
+    var showCamera by remember { mutableStateOf(false) }
+    // Estado para armazenar o bitmap da imagem capturada
+    var capturedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val consultationCreationState by consultationViewModel.consultationCreationState.collectAsState()
     val singleConsultationUiState by consultationViewModel.singleConsultationUiState.collectAsState()
     val updateConsultationState by consultationViewModel.updateConsultationState.collectAsState()
 
     LaunchedEffect(patientId, consultationId) {
+        // Log para depuração: verificar se patientId está chegando
+        // android.util.Log.d("ConsultationScreen", "patientId recebido: $patientId")
+
         if (patientId != null) {
             consultationViewModel.loadPatient(patientId)
         } else {
@@ -133,12 +153,15 @@ fun ConsultationScreen(
             )
         }
     ) { paddingValues ->
+        val scrollState = rememberScrollState()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
-                .imePadding(),
+                .imePadding()
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when (patientUiState) {
@@ -199,7 +222,7 @@ fun ConsultationScreen(
                         } catch (e: ParseException) { null } catch (e: Exception) { null }
 
                         if (formattedDate != null) {
-                            val age = calculateAge2(apiDateString, apiDateFormat) // Usar apiDateFormat para cálculo
+                            val age = calculateAge2(apiDateString, apiDateFormat)
                             Text(
                                 text = "Data de Nascimento: $formattedDate (Idade: ${age ?: "N/A"})",
                                 style = MaterialTheme.typography.bodyMedium
@@ -253,8 +276,39 @@ fun ConsultationScreen(
                             .heightIn(min = 130.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // --- Botão para Abrir a Câmera ---
+                    Button(
+                        onClick = { showCamera = true },
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .align(Alignment.CenterHorizontally),
+                    ) {
+                        Text("Abrir Câmera")
+                    }
 
+                    // Exibir um indicador visual se a imagem foi capturada (opcional)
+                    capturedImageBitmap?.let {
+                        Text(
+                            text = "Imagem capturada!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "Imagem Capturada",
+                            modifier = Modifier
+                                .size(150.dp)
+                                .clip(MaterialTheme.shapes.medium)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // --- Botão de Salvar/Atualizar Consulta ---
                     Button(
                         onClick = {
                             if (patientId == null) {
@@ -262,7 +316,7 @@ fun ConsultationScreen(
                                 return@Button
                             }
 
-                            val apiDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ssZ" // Ajuste para 'X' se necessário
+                            val apiDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
                             val formattedConsultationDate: String? = try {
                                 val inputFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                                 inputFormat.isLenient = false
@@ -285,6 +339,9 @@ fun ConsultationScreen(
                                 dateConsultation = formattedConsultationDate,
                                 photoLocation = photoLocationDescription.takeIf { it.isNotBlank() },
                                 notes = notes.takeIf { it.isNotBlank() }
+                                // Se você quiser anexar a imagem à consulta para envio à API,
+                                // esta é a parte onde você faria a conversão e adicionaria ao ConsultationRequest.
+                                // Exemplo: imageBase64 = capturedImageBitmap?.let { convertBitmapToBase64(it) }
                             )
 
                             if (isEditing && consultationId != null) {
@@ -323,8 +380,33 @@ fun ConsultationScreen(
             }
         }
     }
+
+    // A função CameraCapture é invocada como um Composable separado
+    if (showCamera) {
+        CameraCapture(
+            onImageCaptured = { bitmap ->
+                showCamera = false // Esconde a câmera após a captura
+                capturedImageBitmap = bitmap // Armazena o bitmap capturado
+
+                if (bitmap != null) {
+                    // --- CHAMA A FUNÇÃO PARA SALVAR NA GALERIA AQUI ---
+                    val savedUri = FileUtils.saveBitmapToGallery(context, bitmap)
+                    if (savedUri != null) {
+                        Toast.makeText(context, "Imagem salva na galeria!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Falha ao salvar imagem na galeria.", Toast.LENGTH_SHORT).show()
+                    }
+                    // --------------------------------------------------
+                } else {
+                    Toast.makeText(context, "Captura de imagem cancelada ou falhou.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
 }
 
+
+// Sua função calculateAge2 (sem alterações)
 fun calculateAge2(dobString: String, dateFormat: SimpleDateFormat): String? {
     return try {
         val dob = dateFormat.parse(dobString) ?: return null
