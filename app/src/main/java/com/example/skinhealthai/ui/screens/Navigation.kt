@@ -99,6 +99,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             )
         }
 
+        //rota edição de paciente
         composable(
             route = AppRoutes.PATIENT_REGISTER_WITH_ID,
             arguments = listOf(navArgument("patientId") {
@@ -113,6 +114,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             )
         }
 
+        //rota cadastro paciente
         composable(AppRoutes.PATIENT_REGISTER) {
             PatientRegisterScreen(
                 navController = navController,

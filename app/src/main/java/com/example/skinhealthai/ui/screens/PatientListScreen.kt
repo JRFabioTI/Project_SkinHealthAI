@@ -137,7 +137,7 @@ fun PatientListScreen(
             OutlinedTextField(
                 value = textFieldValue,
                 onValueChange = { textFieldValue = it },
-                label = { Text("Filtro") },
+                label = { Text("Filtrar por Nome, Email ou CPF") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
