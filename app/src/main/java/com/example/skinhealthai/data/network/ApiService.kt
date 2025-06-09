@@ -28,7 +28,7 @@ interface ApiService {
     ): Response<UserResponse>
 
     // Cadastro de usuário
-    @POST("api/skin/user/")
+    @POST("api/skin/users/")
     suspend fun registerUser(
         @Body userRequest: UserRequest
     ): Response<UserResponse>
@@ -37,35 +37,35 @@ interface ApiService {
     @GET("api/skin/user/")
     suspend fun getUsers(): Response<List<UserResponse>>
 
-    @GET("api/skin/user/{id}/")
+    @GET("api/skin/users/{id}/")
     suspend fun getUserById(@Path("id") id: Int): Response<UserResponse>
 
-    @PUT("api/skin/user/{id}/")
+    @PUT("api/skin/users/{id}/")
     suspend fun updateUser(
         @Path("id") id: Int,
         @Body userRequest: UserRequest
     ): Response<UserResponse>
 
-    @DELETE("api/skin/user/{id}/")
+    @DELETE("api/skin/users/{id}/")
     suspend fun deleteUser(@Path("id") id: Int): Response<Unit>
 
     // CRUD de pacientes
-    @GET("api/skin/patient/")
+    @GET("api/skin/patients/")
     suspend fun getPatients(): Response<List<PatientResponse>>
 
-    @GET("api/skin/patient/{id}/")
+    @GET("api/skin/patients/{id}/")
     suspend fun getPatient(@Path("id") id: Int): Response<PatientResponse>
 
-    @POST("api/skin/patient/")
+    @POST("api/skin/patients/")
     suspend fun createPatient(@Body patient: PatientRequest): Response<PatientResponse>
 
-    @PUT("api/skin/patient/{id}/")
+    @PUT("api/skin/patients/{id}/")
     suspend fun updatePatient(
         @Path("id") id: Int,
         @Body patient: PatientRequest
     ): Response<PatientResponse>
 
-    @DELETE("api/skin/patient/{id}/")
+    @DELETE("api/skin/patients/{id}/")
     suspend fun deletePatient(@Path("id") id: Int): Response<Unit>
 
     // CRUD de consultas

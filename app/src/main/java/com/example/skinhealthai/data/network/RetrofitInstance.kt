@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitInstance {
     // URL base da sua API (10.0.2.2 é o localhost do emulador Android)
-    private const val BASE_URL = "http://18.222.138.200:8000/"
+    private const val BASE_URL = "http://10.0.2.2:8000/"
 
     var applicationContext: Context? = null
 
