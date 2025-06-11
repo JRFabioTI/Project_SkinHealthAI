@@ -10,13 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -37,6 +31,19 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+// --- NOVOS IMPORTS ---
+import com.example.skinhealthai.data.model.AppointmentPdfData
+import com.example.skinhealthai.data.model.MedicalRecordPdfContent
+import com.example.skinhealthai.data.model.PatientRecordPdfData
+import com.example.skinhealthai.utils.PdfGenerator
+import androidx.compose.material.icons.filled.PictureAsPdf
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientRecordScreen(
@@ -45,6 +52,7 @@ fun PatientRecordScreen(
     consultationViewModel: ConsultationViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val patientConsultationsUiState by consultationViewModel.patientConsultationsUiState.collectAsState()
@@ -55,6 +63,11 @@ fun PatientRecordScreen(
 
     var filterText by remember { mutableStateOf("") }
 
+
+    val sharePdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = { /* Não precisamos fazer nada com o resultado aqui */ }
+    )
 
     LaunchedEffect(patientId) {
         if (patientId != null) {
@@ -68,7 +81,7 @@ fun PatientRecordScreen(
             is DeleteConsultationUiState.Success -> {
                 Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
                 consultationViewModel.resetDeleteConsultationState()
-                patientId?.let { consultationViewModel.loadPatientConsultations(it) } // Recarrega após exclusão
+                patientId?.let { consultationViewModel.loadPatientConsultations(it) }
             }
             is DeleteConsultationUiState.Error -> {
                 val errorMessage = (deleteConsultationState as DeleteConsultationUiState.Error).message
@@ -102,7 +115,46 @@ fun PatientRecordScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 )
             )
+        },
+
+        floatingActionButton = {
+            if (patientUiState is PatientDataUiState.PatientLoaded &&
+                patientConsultationsUiState is PatientConsultationsUiState.Loaded) {
+                FloatingActionButton(
+                    onClick = {
+                        val patientData = (patientUiState as PatientDataUiState.PatientLoaded).patient
+                        val consultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
+
+                        val patientPdfData = PatientRecordPdfData.fromPatientResponse(patientData)
+                        val appointmentsPdfData = consultations.map { AppointmentPdfData.fromConsultationResponse(it) }
+
+                        val medicalRecordContent = MedicalRecordPdfContent(
+                            patientData = patientPdfData,
+                            appointments = appointmentsPdfData
+                        )
+
+                        coroutineScope.launch {
+                            val pdfUri = PdfGenerator.generateMedicalRecordPdf(context, medicalRecordContent)
+                            if (pdfUri != null) {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    putExtra(Intent.EXTRA_STREAM, pdfUri)
+                                    type = "application/pdf"
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                sharePdfLauncher.launch(Intent.createChooser(shareIntent, "Compartilhar Prontuário PDF com..."))
+                            } else {
+                                Toast.makeText(context, "Erro ao gerar PDF do prontuário.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = "Gerar PDF do Prontuário")
+                }
+            }
         }
+        // --- FIM NOVO ---
     ) { paddingValues ->
         Column(
             modifier = Modifier

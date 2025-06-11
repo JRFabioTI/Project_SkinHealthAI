@@ -1,6 +1,6 @@
 package com.example.skinhealthai.data.model
 
-import com.google.gson.annotations.SerializedName // Import necessário para mapeamento
+import com.google.gson.annotations.SerializedName
 
 data class UserRequest(
     @SerializedName("username") val username: String,
