@@ -29,7 +29,6 @@ sealed class PatientDataUiState {
 sealed class ConsultationCreationState {
     object Idle : ConsultationCreationState()
     object Loading : ConsultationCreationState()
-    // CORREÇÃO: Passar ConsultationResponse no sucesso para obter o ID da nova consulta
     data class Success(val consultation: ConsultationResponse) : ConsultationCreationState()
     data class Error(val message: String) : ConsultationCreationState()
 }
@@ -63,7 +62,6 @@ sealed class DeleteConsultationUiState {
     data class Error(val message: String) : DeleteConsultationUiState()
 }
 
-// Novo: Estado para o upload da imagem
 sealed class ImageUploadState {
     object Idle : ImageUploadState()
     object Loading : ImageUploadState()
@@ -74,7 +72,7 @@ sealed class ImageUploadState {
 class ConsultationViewModel(
     private val patientRepository: PatientRepository = PatientRepository(),
     private val consultationRepository: ConsultationRepository = ConsultationRepository(),
-    private val fileImageRepository: FileImageRepository = FileImageRepository() // Injete o repositório de imagem
+    private val fileImageRepository: FileImageRepository = FileImageRepository()
 ) : ViewModel() {
 
     private val _patientDataUiState = MutableStateFlow<PatientDataUiState>(PatientDataUiState.Idle)
@@ -92,15 +90,14 @@ class ConsultationViewModel(
     private val _updateConsultationState = MutableStateFlow<UpdateConsultationUiState>(UpdateConsultationUiState.Idle)
     val updateConsultationState: StateFlow<UpdateConsultationUiState> = _updateConsultationState.asStateFlow()
 
-    // --- NOVO: Estado para exclusão de consulta ---
     private val _deleteConsultationState = MutableStateFlow<DeleteConsultationUiState>(DeleteConsultationUiState.Idle)
     val deleteConsultationState: StateFlow<DeleteConsultationUiState> = _deleteConsultationState.asStateFlow()
-    // --- FIM NOVO ---
 
-    // NOVO: Estado para o upload da imagem
     private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
     val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState.asStateFlow()
 
+    private val _existingImageUrls = MutableStateFlow<List<String>>(emptyList())
+    val existingImageUrls: StateFlow<List<String>> = _existingImageUrls.asStateFlow()
 
     fun loadPatient(patientId: Int) {
         viewModelScope.launch {
@@ -162,13 +159,17 @@ class ConsultationViewModel(
             try {
                 val response = consultationRepository.getConsultationById(consultationId)
                 if (response.isSuccessful && response.body() != null) {
-                    _singleConsultationUiState.value = SingleConsultationUiState.Loaded(response.body()!!)
+                    val consultation = response.body()!!
+                    _singleConsultationUiState.value = SingleConsultationUiState.Loaded(consultation)
+                    _existingImageUrls.value = consultation.fileImageUrls ?: emptyList()
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao carregar consulta para edição."
                     _singleConsultationUiState.value = SingleConsultationUiState.Error(message)
+                    _existingImageUrls.value = emptyList()
                 }
             } catch (e: Exception) {
                 _singleConsultationUiState.value = SingleConsultationUiState.Error(e.message ?: "Falha na conexão ou erro desconhecido ao carregar consulta.")
+                _existingImageUrls.value = emptyList()
             }
         }
     }
@@ -179,7 +180,6 @@ class ConsultationViewModel(
             try {
                 val response = consultationRepository.updateConsultation(consultationId, consultationRequest)
                 if (response.isSuccessful && response.body() != null) {
-                    // CORREÇÃO: Passar o corpo da resposta para o estado Success
                     _updateConsultationState.value = UpdateConsultationUiState.Success(response.body()!!)
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido ao atualizar consulta."
@@ -224,23 +224,17 @@ class ConsultationViewModel(
         _deleteConsultationState.value = DeleteConsultationUiState.Idle
     }
 
-    // NOVO: Função para fazer o upload da imagem
     fun uploadImageForConsultation(bitmap: Bitmap, consultationId: Int) {
         _imageUploadState.value = ImageUploadState.Loading
         viewModelScope.launch {
             try {
                 val stream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream) // 90% de qualidade
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
                 val byteArray = stream.toByteArray()
-
                 val requestFile = byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
-                // O nome do arquivo a ser enviado. Use um nome único.
                 val fileName = "image_${System.currentTimeMillis()}.jpg"
                 val fileObjPart = MultipartBody.Part.createFormData("file_obj", fileName, requestFile)
-
-                // Cria RequestBody para o 'consultation_id'
                 val consultationIdBody = consultationId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
-
                 val response = fileImageRepository.uploadImageToMinio(fileObjPart, consultationIdBody)
 
                 if (response.isSuccessful && response.body() != null) {
@@ -251,16 +245,17 @@ class ConsultationViewModel(
                     _imageUploadState.value = ImageUploadState.Error("Falha ao fazer upload da imagem: ${response.code()} - $errorBody")
                 }
             } catch (e: IOException) {
-                // Erros de rede ou IO
                 _imageUploadState.value = ImageUploadState.Error("Erro de conexão ou I/O: ${e.message}")
             } catch (e: Exception) {
-                // Outros erros
                 _imageUploadState.value = ImageUploadState.Error("Erro ao processar imagem para upload: ${e.message}")
             }
         }
     }
 
-    // NOVO: Resetar o estado de upload da imagem
+    fun resetExistingImageUrls() {
+        _existingImageUrls.value = emptyList()
+    }
+
     fun resetImageUploadState() {
         _imageUploadState.value = ImageUploadState.Idle
     }

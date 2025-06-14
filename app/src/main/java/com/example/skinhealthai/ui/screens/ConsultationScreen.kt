@@ -1,4 +1,3 @@
-// ui/screens/ConsultationScreen.kt
 package com.example.skinhealthai.ui.screens
 
 import android.graphics.Bitmap
@@ -19,7 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.rememberImagePainter
 import com.example.skinhealthai.data.model.ConsultationRequest
 import com.example.skinhealthai.ui.viewmodel.ImageUploadState
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
@@ -36,12 +40,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.viewmodel.ConsultationViewModelFactory
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,19 +66,31 @@ fun ConsultationScreen(
     var photoLocationDescription by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
-    // Estado para controlar a visibilidade da câmera
     var showCamera by remember { mutableStateOf(false) }
-    // Estado para armazenar o bitmap da imagem capturada
     var capturedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    // Estado para armazenar o ID da consulta recém-criada/atualizada
     var currentConsultationId by remember { mutableStateOf(consultationId) }
+
+    val existingImageUrls by consultationViewModel.existingImageUrls.collectAsState()
+
+    var currentImageToDisplay by remember { mutableStateOf<Any?>(null) }
+
+    LaunchedEffect(existingImageUrls, capturedImageBitmap) {
+        if (capturedImageBitmap != null) {
+            currentImageToDisplay = capturedImageBitmap
+        } else if (existingImageUrls.isNotEmpty()) {
+            currentImageToDisplay = existingImageUrls.first()
+        } else {
+            currentImageToDisplay = null
+        }
+    }
 
 
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val consultationCreationState by consultationViewModel.consultationCreationState.collectAsState()
     val singleConsultationUiState by consultationViewModel.singleConsultationUiState.collectAsState()
     val updateConsultationState by consultationViewModel.updateConsultationState.collectAsState()
-    val imageUploadState by consultationViewModel.imageUploadState.collectAsState() // NOVO: estado de upload da imagem
+    val imageUploadState by consultationViewModel.imageUploadState.collectAsState()
+
 
     LaunchedEffect(patientId, consultationId) {
         if (patientId != null) {
@@ -89,6 +102,9 @@ fun ConsultationScreen(
 
         if (isEditing && consultationId != null) {
             consultationViewModel.loadSingleConsultation(consultationId)
+        } else {
+            consultationViewModel.resetExistingImageUrls()
+            capturedImageBitmap = null
         }
     }
 
@@ -108,7 +124,8 @@ fun ConsultationScreen(
                 }
                 photoLocationDescription = consultation.photoLocation ?: ""
                 notes = consultation.notes ?: ""
-                currentConsultationId = consultation.id
+                currentConsultationId = consultation.id // Garante que o ID da consulta existente é capturado
+                // existingImageUrls já está sendo atualizado em loadSingleConsultation
                 consultationViewModel.resetSingleConsultationState()
             }
             is SingleConsultationUiState.Error -> {
@@ -125,7 +142,7 @@ fun ConsultationScreen(
         var updateProcessed = false
         var consultationIdForUpload: Int? = null
 
-        val currentConsultationCreationState = consultationCreationState
+        val currentConsultationCreationState = consultationCreationState // Variável local para smart cast
         when (currentConsultationCreationState) {
             is ConsultationCreationState.Success -> {
                 val createdConsultation = currentConsultationCreationState.consultation
@@ -142,7 +159,7 @@ fun ConsultationScreen(
             else -> { /* Loading ou Idle, não fazer nada */ }
         }
 
-        val currentUpdateConsultationState = updateConsultationState
+        val currentUpdateConsultationState = updateConsultationState // Variável local para smart cast
         when (currentUpdateConsultationState) {
             is UpdateConsultationUiState.Success -> {
                 val updatedConsultation = currentUpdateConsultationState.consultation
@@ -169,11 +186,12 @@ fun ConsultationScreen(
     }
 
     LaunchedEffect(imageUploadState) {
-        val currentImageUploadState = imageUploadState
+        val currentImageUploadState = imageUploadState // Variável local para smart cast
         when (currentImageUploadState) {
             is ImageUploadState.Success -> {
                 Toast.makeText(context, currentImageUploadState.message, Toast.LENGTH_SHORT).show()
                 consultationViewModel.resetImageUploadState()
+                capturedImageBitmap = null // IMPORTANTE: Limpa o bitmap capturado após upload bem-sucedido
                 navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
                     popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
                 }
@@ -182,7 +200,6 @@ fun ConsultationScreen(
                 Toast.makeText(context, currentImageUploadState.message, Toast.LENGTH_LONG).show()
                 consultationViewModel.resetImageUploadState()
                 // Em caso de erro no upload, ainda navegue de volta
-                // A rota para popUpTo deve ser a STRING LITERAL da rota do NavGraph, incluindo placeholders
                 navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
                     popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
                 }
@@ -330,6 +347,48 @@ fun ConsultationScreen(
                             .heightIn(min = 130.dp)
                     )
 
+                    val imageToDisplay = capturedImageBitmap ?: existingImageUrls.firstOrNull()
+
+                    imageToDisplay?.let { source ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (source is Bitmap) "Nova Imagem Capturada!" else "Imagem Atual da Consulta:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        when (source) {
+                            is Bitmap -> {
+                                Image(
+                                    bitmap = source.asImageBitmap(),
+                                    contentDescription = "Imagem da Consulta",
+                                    modifier = Modifier
+                                        .size(150.dp) // Formato solicitado
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .align(Alignment.CenterHorizontally),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            is String -> {
+                                Image(
+                                    painter = rememberImagePainter(data = source),
+                                    contentDescription = "Imagem da Consulta",
+                                    modifier = Modifier
+                                        .size(150.dp) // Formato solicitado
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .align(Alignment.CenterHorizontally),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            else -> {
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+
                     Button(
                         onClick = { showCamera = true },
                         modifier = Modifier
@@ -338,25 +397,6 @@ fun ConsultationScreen(
                         enabled = imageUploadState !is ImageUploadState.Loading
                     ) {
                         Text("Abrir Câmera")
-                    }
-
-                    capturedImageBitmap?.let {
-                        Text(
-                            text = "Imagem capturada!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "Imagem Capturada",
-                            modifier = Modifier
-                                .size(150.dp)
-                                .clip(MaterialTheme.shapes.medium)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -419,7 +459,7 @@ fun ConsultationScreen(
                 }
                 is PatientDataUiState.Error -> {
                     Text(
-                        text = (patientUiState as PatientDataUiState.Error).message,
+                        text = (currentPatientUiState as PatientDataUiState.Error).message,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -469,4 +509,3 @@ fun calculateAge2(dobString: String, dateFormat: SimpleDateFormat): String? {
         null
     }
 }
-

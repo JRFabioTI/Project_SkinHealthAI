@@ -5,14 +5,14 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.skinhealthai.data.network.ApiService
 import com.example.skinhealthai.repository.PatientRepository
 import com.example.skinhealthai.repository.ConsultationRepository
-import com.example.skinhealthai.repository.FileImageRepository // Adicione este
+import com.example.skinhealthai.repository.FileImageRepository
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
 
 class ConsultationViewModelFactory(
     private val apiService: ApiService,
     private val patientRepository: PatientRepository,
     private val consultationRepository: ConsultationRepository,
-    private val fileImageRepository: FileImageRepository // Inclua o novo repositório
+    private val fileImageRepository: FileImageRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ConsultationViewModel::class.java)) {
