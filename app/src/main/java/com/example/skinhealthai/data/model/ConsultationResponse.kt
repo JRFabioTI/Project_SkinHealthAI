@@ -22,5 +22,6 @@ data class ConsultationResponse(
     val dateCreated: String,
     @SerializedName("date_modified")
     val dateModified: String,
-    val active: Boolean
+    val active: Boolean,
+    @SerializedName("file_image_urls") val fileImageUrls: List<String>?
 )

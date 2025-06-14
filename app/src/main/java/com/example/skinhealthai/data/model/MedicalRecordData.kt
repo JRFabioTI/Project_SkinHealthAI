@@ -71,7 +71,8 @@ data class PatientRecordPdfData(
 data class AppointmentPdfData(
     val dateConsultation: String,
     val photoLocation: String?,
-    val notes: String?
+    val notes: String?,
+    val fileImageUrls: List<String>?
 ) {
     companion object {
         fun fromConsultationResponse(consultation: ConsultationResponse): AppointmentPdfData {
@@ -87,7 +88,8 @@ data class AppointmentPdfData(
             return AppointmentPdfData(
                 dateConsultation = formattedConsultationDate ?: "Data/Hora Inválida",
                 photoLocation = consultation.photoLocation,
-                notes = consultation.notes
+                notes = consultation.notes,
+                fileImageUrls = consultation.fileImageUrls
             )
         }
     }

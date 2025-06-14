@@ -8,18 +8,21 @@ import com.example.skinhealthai.data.model.UserResponse
 import com.example.skinhealthai.data.model.PatientRequest
 import com.example.skinhealthai.data.model.PatientResponse
 import com.example.skinhealthai.data.model.PredictionResponse
+import com.example.skinhealthai.data.model.UploadImageResponse
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.*
 
 interface ApiService {
 
-    // Upload de imagem para predição
     @Multipart
     @POST("api/skin/consultation/upload_file/")
-    suspend fun uploadImage(
-        @Part image: MultipartBody.Part
-    ): Response<PredictionResponse>
+    suspend fun uploadImageToMinio(
+        @Part file_obj: MultipartBody.Part,
+        @Part("consultation_id") consultationId: RequestBody
+    ): Response<UploadImageResponse>
+
 
     // Autenticação
     @POST("api/token/")

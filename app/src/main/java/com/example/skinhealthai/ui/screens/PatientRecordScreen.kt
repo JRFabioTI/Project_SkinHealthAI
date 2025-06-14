@@ -1,6 +1,9 @@
 package com.example.skinhealthai.ui.screens
 
+import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,28 +24,26 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
+import com.example.skinhealthai.data.model.AppointmentPdfData
 import com.example.skinhealthai.data.model.ConsultationResponse
+import com.example.skinhealthai.data.model.MedicalRecordPdfContent
+import com.example.skinhealthai.data.model.PatientRecordPdfData
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
 import com.example.skinhealthai.ui.viewmodel.DeleteConsultationUiState
 import com.example.skinhealthai.ui.viewmodel.PatientConsultationsUiState
 import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
+import com.example.skinhealthai.utils.PdfGenerator
+import kotlinx.coroutines.launch
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
-// --- NOVOS IMPORTS ---
-import com.example.skinhealthai.data.model.AppointmentPdfData
-import com.example.skinhealthai.data.model.MedicalRecordPdfContent
-import com.example.skinhealthai.data.model.PatientRecordPdfData
-import com.example.skinhealthai.utils.PdfGenerator
-import androidx.compose.material.icons.filled.PictureAsPdf
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
+import com.example.skinhealthai.viewmodel.ConsultationViewModelFactory
+import com.example.skinhealthai.data.network.RetrofitInstance
+import com.example.skinhealthai.repository.PatientRepository
+import com.example.skinhealthai.repository.ConsultationRepository
+import com.example.skinhealthai.repository.FileImageRepository
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +51,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 fun PatientRecordScreen(
     navController: NavController,
     patientId: Int?,
-    consultationViewModel: ConsultationViewModel = viewModel()
+    consultationViewModel: ConsultationViewModel = viewModel(
+        factory = ConsultationViewModelFactory(
+            apiService = RetrofitInstance.api,
+            patientRepository = PatientRepository(),
+            consultationRepository = ConsultationRepository(),
+            fileImageRepository = FileImageRepository()
+        )
+    )
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -77,14 +86,15 @@ fun PatientRecordScreen(
     }
 
     LaunchedEffect(deleteConsultationState) {
-        when (deleteConsultationState) {
+        val currentDeleteConsultationState = deleteConsultationState
+        when (currentDeleteConsultationState) {
             is DeleteConsultationUiState.Success -> {
                 Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
                 consultationViewModel.resetDeleteConsultationState()
                 patientId?.let { consultationViewModel.loadPatientConsultations(it) }
             }
             is DeleteConsultationUiState.Error -> {
-                val errorMessage = (deleteConsultationState as DeleteConsultationUiState.Error).message
+                val errorMessage = currentDeleteConsultationState.message
                 Toast.makeText(context, "Erro ao excluir consulta: $errorMessage", Toast.LENGTH_LONG).show()
                 consultationViewModel.resetDeleteConsultationState()
             }
@@ -118,12 +128,15 @@ fun PatientRecordScreen(
         },
 
         floatingActionButton = {
-            if (patientUiState is PatientDataUiState.PatientLoaded &&
-                patientConsultationsUiState is PatientConsultationsUiState.Loaded) {
+            val currentPatientUiState = patientUiState
+            val currentPatientConsultationsUiState = patientConsultationsUiState
+
+            if (currentPatientUiState is PatientDataUiState.PatientLoaded &&
+                currentPatientConsultationsUiState is PatientConsultationsUiState.Loaded) {
                 FloatingActionButton(
                     onClick = {
-                        val patientData = (patientUiState as PatientDataUiState.PatientLoaded).patient
-                        val consultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
+                        val patientData = currentPatientUiState.patient
+                        val consultations = currentPatientConsultationsUiState.consultations
 
                         val patientPdfData = PatientRecordPdfData.fromPatientResponse(patientData)
                         val appointmentsPdfData = consultations.map { AppointmentPdfData.fromConsultationResponse(it) }
@@ -154,7 +167,6 @@ fun PatientRecordScreen(
                 }
             }
         }
-        // --- FIM NOVO ---
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -164,13 +176,14 @@ fun PatientRecordScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            when (patientUiState) {
+            val currentPatientUiState = patientUiState
+            when (currentPatientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     Text("Carregando dados do paciente...", modifier = Modifier.align(Alignment.CenterHorizontally))
                 }
                 is PatientDataUiState.PatientLoaded -> {
-                    val patient = (patientUiState as PatientDataUiState.PatientLoaded).patient
+                    val patient = currentPatientUiState.patient
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -213,7 +226,7 @@ fun PatientRecordScreen(
 
                     patient.date_of_birth?.let { apiDateString ->
                         val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato da API
+                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
                         val formattedDate = try {
                             apiFormat.parse(apiDateString)?.let { dateObject ->
@@ -267,13 +280,14 @@ fun PatientRecordScreen(
                             .padding(bottom = 8.dp)
                     )
 
-                    when (patientConsultationsUiState) {
+                    val currentPatientConsultationsUiState = patientConsultationsUiState
+                    when (currentPatientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                             Text("Carregando histórico de consultas...", modifier = Modifier.align(Alignment.CenterHorizontally))
                         }
                         is PatientConsultationsUiState.Loaded -> {
-                            val allConsultations = (patientConsultationsUiState as PatientConsultationsUiState.Loaded).consultations
+                            val allConsultations = currentPatientConsultationsUiState.consultations
 
                             val filteredConsultations = remember(filterText, allConsultations) {
                                 if (filterText.isBlank()) {
@@ -352,6 +366,7 @@ fun PatientRecordScreen(
                                                             onClick = {
                                                                 consultation.id?.let { consId ->
                                                                     patientId?.let { pId ->
+                                                                        // CORREÇÃO: Sintaxe da rota de navegação
                                                                         navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${pId}?consultationId=${consId}")
                                                                     } ?: Toast.makeText(context, "Erro: ID do paciente não disponível para edição.", Toast.LENGTH_SHORT).show()
                                                                 } ?: Toast.makeText(context, "Erro: ID da consulta não disponível para edição.", Toast.LENGTH_SHORT).show()
@@ -370,6 +385,38 @@ fun PatientRecordScreen(
                                                     }
                                                 }
 
+                                                consultation.fileImageUrls?.let { urls ->
+                                                    if (urls.isNotEmpty()) {
+                                                        Spacer(modifier = Modifier.height(8.dp))
+                                                        Text(
+                                                            text = "Imagens da Consulta:",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.SemiBold
+                                                        )
+                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                        // Itera sobre cada URL e exibe a imagem
+                                                        urls.forEach { imageUrl ->
+                                                            Image(
+                                                                painter = rememberImagePainter(data = imageUrl), // Agora usa a URL correta do MinIO
+                                                                contentDescription = "Imagem da Consulta",
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .height(200.dp), // Altura fixa para visualização
+                                                                contentScale = ContentScale.Crop
+                                                            )
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                        }
+                                                    }
+                                                }
+
+                                                // Exibir photoLocation e notes textuais
+                                                consultation.photoLocation?.let { photoLoc ->
+                                                    Text(
+                                                        text = "Local da Foto: $photoLoc",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
+                                                }
                                                 consultation.notes?.let { notes ->
                                                     Text(
                                                         text = "Notas: $notes",
@@ -377,24 +424,7 @@ fun PatientRecordScreen(
                                                         modifier = Modifier.padding(top = 4.dp)
                                                     )
                                                 }
-                                                consultation.photoLocation?.let { photoLoc ->
-                                                    Text(
-                                                        text = "Local da Foto: $photoLoc",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        modifier = Modifier.padding(top = 4.dp)
-                                                    )
-                                                    if (photoLoc.startsWith("http://") || photoLoc.startsWith("https://")) {
-                                                        Spacer(modifier = Modifier.height(8.dp))
-                                                        Image(
-                                                            painter = rememberImagePainter(data = photoLoc),
-                                                            contentDescription = "Foto da Consulta",
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .height(200.dp),
-                                                            contentScale = ContentScale.Crop
-                                                        )
-                                                    }
-                                                }
+
                                             }
                                         }
                                     }
@@ -403,7 +433,7 @@ fun PatientRecordScreen(
                         }
                         is PatientConsultationsUiState.Error -> {
                             Text(
-                                text = (patientConsultationsUiState as PatientConsultationsUiState.Error).message,
+                                text = (currentPatientConsultationsUiState as PatientConsultationsUiState.Error).message,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -416,7 +446,7 @@ fun PatientRecordScreen(
                 }
                 is PatientDataUiState.Error -> {
                     Text(
-                        text = (patientUiState as PatientDataUiState.Error).message,
+                        text = (currentPatientUiState as PatientDataUiState.Error).message,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)

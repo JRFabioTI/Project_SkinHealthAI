@@ -20,6 +20,7 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.util.Log // Adicione para logs de depuração
 
 object PdfGenerator {
     private fun drawTextWithLineBreaks(canvas: Canvas, paint: Paint, text: String, x: Float, y: Float, maxWidth: Float): Float {
@@ -127,8 +128,10 @@ object PdfGenerator {
             }
 
             sortedAppointments.forEachIndexed { index, appointment ->
-                val estimatedAppointmentHeight = 250f
-                if (yPosition + estimatedAppointmentHeight > pageInfo.pageHeight - margin) {
+                val estimatedAppointmentContentHeight = 250f // Estimativa de altura para texto e uma imagem. Ajuste se necessário.
+
+                // Verifica se precisa de nova página antes de desenhar os dados da consulta
+                if (yPosition + estimatedAppointmentContentHeight > pageInfo.pageHeight - margin) {
                     pdfDocument.finishPage(page)
                     page = pdfDocument.startPage(pageInfo)
                     canvas = page.canvas
@@ -148,56 +151,85 @@ object PdfGenerator {
 
                 paint.textSize = 14f
                 paint.isFakeBoldText = false
+
+                // NOVO: Desenha as imagens (se houver)
+                appointment.fileImageUrls?.let { imageUrls ->
+                    if (imageUrls.isNotEmpty()) {
+                        imageUrls.forEachIndexed { imgIndex, imageUrl ->
+                            try {
+                                if (yPosition + 250 > pageInfo.pageHeight - margin) { // Altura estimada para imagem + label
+                                    pdfDocument.finishPage(page)
+                                    page = pdfDocument.startPage(pageInfo)
+                                    canvas = page.canvas
+                                    yPosition = margin
+                                    paint.color = Color.BLACK
+                                    paint.textSize = 24f
+                                    paint.isFakeBoldText = true
+                                    canvas.drawText("Prontuário Médico (Continuação)", margin, yPosition, paint)
+                                    yPosition += 40f
+                                }
+
+                                paint.isFakeBoldText = true
+                                canvas.drawText("Imagem da Consulta ${imgIndex + 1}:", margin, yPosition, paint)
+                                yPosition += 25f
+                                paint.isFakeBoldText = false
+
+                                val bitmap = downloadImage(imageUrl) // Chama a função para baixar a imagem
+                                if (bitmap != null) {
+                                    val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
+                                    val maxImageWidth = contentWidth * 0.9f // Ajuste a largura máxima da imagem no PDF
+                                    var imageHeight = maxImageWidth / aspectRatio
+                                    var imageWidth = maxImageWidth
+
+                                    val maxAllowedHeight = pageInfo.pageHeight - yPosition - margin - 20f // Espaço restante na página
+                                    if (imageHeight > maxAllowedHeight) { // Se a imagem for muito alta
+                                        imageHeight = maxAllowedHeight
+                                        imageWidth = imageHeight * aspectRatio
+                                    }
+
+                                    val imageRect = RectF(margin, yPosition, margin + imageWidth, yPosition + imageHeight)
+                                    canvas.drawBitmap(bitmap, null, imageRect, null)
+                                    yPosition += imageHeight + 20f
+                                    bitmap.recycle() // Libera a memória do bitmap
+                                } else {
+                                    paint.color = Color.RED
+                                    canvas.drawText("Erro ao carregar imagem da URL: $imageUrl", margin, yPosition, paint)
+                                    paint.color = Color.BLACK
+                                    yPosition += 20f
+                                }
+                            } catch (e: Exception) {
+                                Log.e("PdfGenerator", "Erro ao desenhar imagem: ${e.message}", e)
+                                paint.color = Color.RED
+                                canvas.drawText("Erro ao carregar ou desenhar imagem: ${e.message}", margin, yPosition, paint)
+                                paint.color = Color.BLACK
+                                yPosition += 20f
+                            }
+                        }
+                    }
+                }
+
+                // Desenha photoLocation (se houver)
+                appointment.photoLocation?.let { photoLoc ->
+                    paint.isFakeBoldText = true
+                    canvas.drawText("Local da Lesão:", margin, yPosition, paint)
+                    yPosition += paint.fontSpacing
+                    paint.isFakeBoldText = false
+                    yPosition = drawTextWithLineBreaks(canvas, paint, photoLoc, margin + 10, yPosition, contentWidth - 10)
+                    yPosition += 10f
+                }
+
+
+                // Desenha Notas (se houver)
                 appointment.notes?.let { notes ->
+                    paint.isFakeBoldText = true
                     canvas.drawText("Notas:", margin, yPosition, paint)
                     yPosition += paint.fontSpacing
+                    paint.isFakeBoldText = false
                     yPosition = drawTextWithLineBreaks(canvas, paint, notes, margin + 10, yPosition, contentWidth - 10)
                     yPosition += 10f
                 }
 
-                appointment.photoLocation?.let { photoUrl ->
-                    if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) {
-                        try {
-                            paint.isFakeBoldText = true
-                            canvas.drawText("Local da Lesão:", margin, yPosition, paint)
-                            yPosition += 25f
-                            paint.isFakeBoldText = false
-
-
-                            val bitmap = downloadImage(photoUrl)
-                            if (bitmap != null) {
-                                val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
-                                val maxImageWidth = contentWidth * 0.7f
-                                var imageHeight = maxImageWidth / aspectRatio
-                                var imageWidth = maxImageWidth
-
-                                if (imageHeight > 200) {
-                                    imageHeight = 200f
-                                    imageWidth = imageHeight * aspectRatio
-                                }
-
-                                val imageRect = RectF(margin, yPosition, margin + imageWidth, yPosition + imageHeight)
-                                canvas.drawBitmap(bitmap, null, imageRect, null)
-                                yPosition += imageHeight + 20f
-                                bitmap.recycle()
-                            } else {
-                                paint.color = Color.RED
-                                canvas.drawText("Erro ao carregar imagem da URL: $photoUrl", margin, yPosition, paint)
-                                paint.color = Color.BLACK
-                                yPosition += 20f
-                            }
-                        } catch (e: Exception) {
-                            paint.color = Color.RED
-                            canvas.drawText("Erro ao carregar imagem: ${e.message}", margin, yPosition, paint)
-                            paint.color = Color.BLACK
-                            yPosition += 20f
-                        }
-                    } else {
-                        canvas.drawText("Local da Lesão: $photoUrl", margin, yPosition, paint)
-                        yPosition += 20f
-                    }
-                }
-                yPosition += 30f
+                yPosition += 30f // Espaço entre as consultas
             }
         }
 
@@ -213,6 +245,7 @@ object PdfGenerator {
             pdfDocument.close()
             FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
         } catch (e: Exception) {
+            Log.e("PdfGenerator", "Erro ao gerar PDF: ${e.message}", e)
             e.printStackTrace()
             null
         }
@@ -220,12 +253,15 @@ object PdfGenerator {
 
     private suspend fun downloadImage(url: String): Bitmap? = withContext(Dispatchers.IO) {
         try {
+            Log.d("PdfGenerator", "Tentando baixar imagem da URL: $url")
             val connection = URL(url).openConnection()
             connection.connect()
             val input: InputStream = connection.getInputStream()
-            BitmapFactory.decodeStream(input)
+            val bitmap = BitmapFactory.decodeStream(input)
+            Log.d("PdfGenerator", "Imagem baixada: ${bitmap?.byteCount ?: 0} bytes")
+            bitmap
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("PdfGenerator", "Erro ao baixar imagem da URL: $url - ${e.message}", e)
             null
         }
     }
