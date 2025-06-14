@@ -1,22 +1,18 @@
-
 package com.example.skinhealthai.repository
 
-import com.example.skinhealthai.data.network.RetrofitInstance
-import com.example.skinhealthai.data.model.UploadImageResponse
 import com.example.skinhealthai.data.network.ApiService
+import com.example.skinhealthai.data.network.RetrofitInstance
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import com.example.skinhealthai.data.model.UploadImageResponse
 import retrofit2.Response
 
-class ImageRepository(private val apiService: ApiService = RetrofitInstance.api) {
+class FileImageRepository(private val apiService: ApiService = RetrofitInstance.api) {
 
-    // Método para upload de imagem para MinIO (associação com consulta)
     suspend fun uploadImageToMinio(
         fileObj: MultipartBody.Part,
         consultationId: RequestBody
     ): Response<UploadImageResponse> {
         return apiService.uploadImageToMinio(fileObj, consultationId)
     }
-
-
 }

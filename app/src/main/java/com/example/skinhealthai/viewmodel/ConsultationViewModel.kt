@@ -1,5 +1,6 @@
 package com.example.skinhealthai.ui.viewmodel
 
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.skinhealthai.data.model.ConsultationResponse
@@ -7,10 +8,16 @@ import com.example.skinhealthai.data.model.ConsultationRequest
 import com.example.skinhealthai.data.model.PatientResponse
 import com.example.skinhealthai.repository.PatientRepository
 import com.example.skinhealthai.repository.ConsultationRepository
+import com.example.skinhealthai.repository.FileImageRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 
 sealed class PatientDataUiState {
     object Loading : PatientDataUiState()
@@ -22,7 +29,8 @@ sealed class PatientDataUiState {
 sealed class ConsultationCreationState {
     object Idle : ConsultationCreationState()
     object Loading : ConsultationCreationState()
-    object Success : ConsultationCreationState()
+    // CORREÇÃO: Passar ConsultationResponse no sucesso para obter o ID da nova consulta
+    data class Success(val consultation: ConsultationResponse) : ConsultationCreationState()
     data class Error(val message: String) : ConsultationCreationState()
 }
 
@@ -43,7 +51,8 @@ sealed class SingleConsultationUiState {
 sealed class UpdateConsultationUiState {
     object Idle : UpdateConsultationUiState()
     object Loading : UpdateConsultationUiState()
-    object Success : UpdateConsultationUiState()
+    // CORREÇÃO: Passar ConsultationResponse no sucesso da atualização
+    data class Success(val consultation: ConsultationResponse) : UpdateConsultationUiState()
     data class Error(val message: String) : UpdateConsultationUiState()
 }
 
@@ -54,9 +63,18 @@ sealed class DeleteConsultationUiState {
     data class Error(val message: String) : DeleteConsultationUiState()
 }
 
+// Novo: Estado para o upload da imagem
+sealed class ImageUploadState {
+    object Idle : ImageUploadState()
+    object Loading : ImageUploadState()
+    data class Success(val message: String, val consultationId: String) : ImageUploadState()
+    data class Error(val message: String) : ImageUploadState()
+}
+
 class ConsultationViewModel(
     private val patientRepository: PatientRepository = PatientRepository(),
-    private val consultationRepository: ConsultationRepository = ConsultationRepository()
+    private val consultationRepository: ConsultationRepository = ConsultationRepository(),
+    private val fileImageRepository: FileImageRepository = FileImageRepository() // Injete o repositório de imagem
 ) : ViewModel() {
 
     private val _patientDataUiState = MutableStateFlow<PatientDataUiState>(PatientDataUiState.Idle)
@@ -78,6 +96,10 @@ class ConsultationViewModel(
     private val _deleteConsultationState = MutableStateFlow<DeleteConsultationUiState>(DeleteConsultationUiState.Idle)
     val deleteConsultationState: StateFlow<DeleteConsultationUiState> = _deleteConsultationState.asStateFlow()
     // --- FIM NOVO ---
+
+    // NOVO: Estado para o upload da imagem
+    private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
+    val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState.asStateFlow()
 
 
     fun loadPatient(patientId: Int) {
@@ -103,7 +125,8 @@ class ConsultationViewModel(
             try {
                 val response = consultationRepository.createConsultation(consultationRequest)
                 if (response.isSuccessful && response.body() != null) {
-                    _consultationCreationState.value = ConsultationCreationState.Success
+                    // CORREÇÃO: Passar o corpo da resposta para o estado Success
+                    _consultationCreationState.value = ConsultationCreationState.Success(response.body()!!)
                     loadPatientConsultations(consultationRequest.patientId)
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao registrar consulta."
@@ -114,6 +137,7 @@ class ConsultationViewModel(
             }
         }
     }
+
 
     fun loadPatientConsultations(patientId: Int) {
         viewModelScope.launch {
@@ -154,8 +178,9 @@ class ConsultationViewModel(
             _updateConsultationState.value = UpdateConsultationUiState.Loading
             try {
                 val response = consultationRepository.updateConsultation(consultationId, consultationRequest)
-                if (response.isSuccessful) {
-                    _updateConsultationState.value = UpdateConsultationUiState.Success
+                if (response.isSuccessful && response.body() != null) {
+                    // CORREÇÃO: Passar o corpo da resposta para o estado Success
+                    _updateConsultationState.value = UpdateConsultationUiState.Success(response.body()!!)
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro desconhecido ao atualizar consulta."
                     _updateConsultationState.value = UpdateConsultationUiState.Error(message)
@@ -197,5 +222,46 @@ class ConsultationViewModel(
 
     fun resetDeleteConsultationState() {
         _deleteConsultationState.value = DeleteConsultationUiState.Idle
+    }
+
+    // NOVO: Função para fazer o upload da imagem
+    fun uploadImageForConsultation(bitmap: Bitmap, consultationId: Int) {
+        _imageUploadState.value = ImageUploadState.Loading
+        viewModelScope.launch {
+            try {
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream) // 90% de qualidade
+                val byteArray = stream.toByteArray()
+
+                val requestFile = byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
+                // O nome do arquivo a ser enviado. Use um nome único.
+                val fileName = "image_${System.currentTimeMillis()}.jpg"
+                val fileObjPart = MultipartBody.Part.createFormData("file_obj", fileName, requestFile)
+
+                // Cria RequestBody para o 'consultation_id'
+                val consultationIdBody = consultationId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+
+                val response = fileImageRepository.uploadImageToMinio(fileObjPart, consultationIdBody)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val uploadResponse = response.body()!!
+                    _imageUploadState.value = ImageUploadState.Success(uploadResponse.message, uploadResponse.consultationId)
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Erro desconhecido"
+                    _imageUploadState.value = ImageUploadState.Error("Falha ao fazer upload da imagem: ${response.code()} - $errorBody")
+                }
+            } catch (e: IOException) {
+                // Erros de rede ou IO
+                _imageUploadState.value = ImageUploadState.Error("Erro de conexão ou I/O: ${e.message}")
+            } catch (e: Exception) {
+                // Outros erros
+                _imageUploadState.value = ImageUploadState.Error("Erro ao processar imagem para upload: ${e.message}")
+            }
+        }
+    }
+
+    // NOVO: Resetar o estado de upload da imagem
+    fun resetImageUploadState() {
+        _imageUploadState.value = ImageUploadState.Idle
     }
 }

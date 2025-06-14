@@ -1,3 +1,4 @@
+// ui/screens/ConsultationScreen.kt
 package com.example.skinhealthai.ui.screens
 
 import android.graphics.Bitmap
@@ -17,26 +18,30 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.compose.rememberNavController
 import com.example.skinhealthai.data.model.ConsultationRequest
+import com.example.skinhealthai.ui.viewmodel.ImageUploadState
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
 import com.example.skinhealthai.ui.viewmodel.PatientDataUiState
 import com.example.skinhealthai.ui.viewmodel.ConsultationCreationState
 import com.example.skinhealthai.ui.viewmodel.SingleConsultationUiState
 import com.example.skinhealthai.ui.viewmodel.UpdateConsultationUiState
+import com.example.skinhealthai.data.network.RetrofitInstance
+import com.example.skinhealthai.repository.PatientRepository
+import com.example.skinhealthai.repository.ConsultationRepository
+import com.example.skinhealthai.repository.FileImageRepository
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
-// Imports adicionais para o scroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
-
-// Importar a classe FileUtils
 import com.example.skinhealthai.utils.FileUtils
+import com.example.skinhealthai.viewmodel.ConsultationViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +49,14 @@ fun ConsultationScreen(
     navController: NavController,
     patientId: Int?,
     consultationId: Int? = null,
-    consultationViewModel: ConsultationViewModel = viewModel()
+    consultationViewModel: ConsultationViewModel = viewModel(
+        factory = ConsultationViewModelFactory(
+            apiService = RetrofitInstance.api,
+            patientRepository = PatientRepository(),
+            consultationRepository = ConsultationRepository(),
+            fileImageRepository = FileImageRepository()
+        )
+    )
 ) {
     val context = LocalContext.current
     val isEditing = consultationId != null
@@ -57,17 +69,17 @@ fun ConsultationScreen(
     var showCamera by remember { mutableStateOf(false) }
     // Estado para armazenar o bitmap da imagem capturada
     var capturedImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    // Estado para armazenar o ID da consulta recém-criada/atualizada
+    var currentConsultationId by remember { mutableStateOf(consultationId) }
 
 
     val patientUiState by consultationViewModel.patientDataUiState.collectAsState()
     val consultationCreationState by consultationViewModel.consultationCreationState.collectAsState()
     val singleConsultationUiState by consultationViewModel.singleConsultationUiState.collectAsState()
     val updateConsultationState by consultationViewModel.updateConsultationState.collectAsState()
+    val imageUploadState by consultationViewModel.imageUploadState.collectAsState() // NOVO: estado de upload da imagem
 
     LaunchedEffect(patientId, consultationId) {
-        // Log para depuração: verificar se patientId está chegando
-        // android.util.Log.d("ConsultationScreen", "patientId recebido: $patientId")
-
         if (patientId != null) {
             consultationViewModel.loadPatient(patientId)
         } else {
@@ -81,9 +93,10 @@ fun ConsultationScreen(
     }
 
     LaunchedEffect(singleConsultationUiState) {
-        when (singleConsultationUiState) {
+        val currentSingleConsultationUiState = singleConsultationUiState
+        when (currentSingleConsultationUiState) {
             is SingleConsultationUiState.Loaded -> {
-                val consultation = (singleConsultationUiState as SingleConsultationUiState.Loaded).consultation
+                val consultation = currentSingleConsultationUiState.consultation
                 try {
                     val apiDateTimeFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault())
                     val displayFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -95,10 +108,11 @@ fun ConsultationScreen(
                 }
                 photoLocationDescription = consultation.photoLocation ?: ""
                 notes = consultation.notes ?: ""
+                currentConsultationId = consultation.id
                 consultationViewModel.resetSingleConsultationState()
             }
             is SingleConsultationUiState.Error -> {
-                Toast.makeText(context, (singleConsultationUiState as SingleConsultationUiState.Error).message, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, currentSingleConsultationUiState.message, Toast.LENGTH_LONG).show()
                 consultationViewModel.resetSingleConsultationState()
                 navController.popBackStack()
             }
@@ -107,34 +121,73 @@ fun ConsultationScreen(
     }
 
     LaunchedEffect(consultationCreationState, updateConsultationState) {
-        when (consultationCreationState) {
+        var consultationProcessed = false
+        var updateProcessed = false
+        var consultationIdForUpload: Int? = null
+
+        val currentConsultationCreationState = consultationCreationState
+        when (currentConsultationCreationState) {
             is ConsultationCreationState.Success -> {
+                val createdConsultation = currentConsultationCreationState.consultation
+                consultationIdForUpload = createdConsultation.id
                 Toast.makeText(context, "Consulta registrada com sucesso!", Toast.LENGTH_SHORT).show()
+                consultationProcessed = true
                 consultationViewModel.resetConsultationCreationState()
-                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
-                    popUpTo("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") { inclusive = true }
-                }
             }
             is ConsultationCreationState.Error -> {
-                Toast.makeText(context, (consultationCreationState as ConsultationCreationState.Error).message, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, currentConsultationCreationState.message, Toast.LENGTH_LONG).show()
+                consultationProcessed = false
                 consultationViewModel.resetConsultationCreationState()
             }
-            else -> { /* Idle ou Loading */ }
+            else -> { /* Loading ou Idle, não fazer nada */ }
         }
 
-        when (updateConsultationState) {
+        val currentUpdateConsultationState = updateConsultationState
+        when (currentUpdateConsultationState) {
             is UpdateConsultationUiState.Success -> {
+                val updatedConsultation = currentUpdateConsultationState.consultation
+                consultationIdForUpload = updatedConsultation.id
                 Toast.makeText(context, "Consulta atualizada com sucesso!", Toast.LENGTH_SHORT).show()
+                updateProcessed = true
                 consultationViewModel.resetUpdateConsultationState()
-                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
-                    popUpTo("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") { inclusive = true }
-                }
             }
             is UpdateConsultationUiState.Error -> {
-                Toast.makeText(context, (updateConsultationState as UpdateConsultationUiState.Error).message, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, currentUpdateConsultationState.message, Toast.LENGTH_LONG).show()
+                updateProcessed = false
                 consultationViewModel.resetUpdateConsultationState()
             }
-            else -> { /* Idle ou Loading */ }
+            else -> { /* Loading ou Idle, não fazer nada */ }
+        }
+
+        if ((consultationProcessed || updateProcessed) && capturedImageBitmap != null && consultationIdForUpload != null) {
+            consultationViewModel.uploadImageForConsultation(capturedImageBitmap!!, consultationIdForUpload)
+        } else if (consultationProcessed || updateProcessed) {
+            navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
+                popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
+            }
+        }
+    }
+
+    LaunchedEffect(imageUploadState) {
+        val currentImageUploadState = imageUploadState
+        when (currentImageUploadState) {
+            is ImageUploadState.Success -> {
+                Toast.makeText(context, currentImageUploadState.message, Toast.LENGTH_SHORT).show()
+                consultationViewModel.resetImageUploadState()
+                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
+                    popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
+                }
+            }
+            is ImageUploadState.Error -> {
+                Toast.makeText(context, currentImageUploadState.message, Toast.LENGTH_LONG).show()
+                consultationViewModel.resetImageUploadState()
+                // Em caso de erro no upload, ainda navegue de volta
+                // A rota para popUpTo deve ser a STRING LITERAL da rota do NavGraph, incluindo placeholders
+                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
+                    popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
+                }
+            }
+            else -> { /* Idle ou Loading, não fazer nada, apenas mostrar progresso */ }
         }
     }
 
@@ -164,13 +217,14 @@ fun ConsultationScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            when (patientUiState) {
+            val currentPatientUiState = patientUiState
+            when (currentPatientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     Text("Carregando dados do paciente...", modifier = Modifier.align(Alignment.CenterHorizontally))
                 }
                 is PatientDataUiState.PatientLoaded -> {
-                    val patient = (patientUiState as PatientDataUiState.PatientLoaded).patient
+                    val patient = currentPatientUiState.patient
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -276,17 +330,16 @@ fun ConsultationScreen(
                             .heightIn(min = 130.dp)
                     )
 
-                    // --- Botão para Abrir a Câmera ---
                     Button(
                         onClick = { showCamera = true },
                         modifier = Modifier
                             .fillMaxWidth(0.5f)
                             .align(Alignment.CenterHorizontally),
+                        enabled = imageUploadState !is ImageUploadState.Loading
                     ) {
                         Text("Abrir Câmera")
                     }
 
-                    // Exibir um indicador visual se a imagem foi capturada (opcional)
                     capturedImageBitmap?.let {
                         Text(
                             text = "Imagem capturada!",
@@ -308,7 +361,6 @@ fun ConsultationScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // --- Botão de Salvar/Atualizar Consulta ---
                     Button(
                         onClick = {
                             if (patientId == null) {
@@ -339,9 +391,6 @@ fun ConsultationScreen(
                                 dateConsultation = formattedConsultationDate,
                                 photoLocation = photoLocationDescription.takeIf { it.isNotBlank() },
                                 notes = notes.takeIf { it.isNotBlank() }
-                                // Se você quiser anexar a imagem à consulta para envio à API,
-                                // esta é a parte onde você faria a conversão e adicionaria ao ConsultationRequest.
-                                // Exemplo: imageBase64 = capturedImageBitmap?.let { convertBitmapToBase64(it) }
                             )
 
                             if (isEditing && consultationId != null) {
@@ -355,11 +404,13 @@ fun ConsultationScreen(
                             .align(Alignment.CenterHorizontally),
                         enabled = (consultationCreationState !is ConsultationCreationState.Loading &&
                                 updateConsultationState !is UpdateConsultationUiState.Loading &&
-                                singleConsultationUiState !is SingleConsultationUiState.Loading)
+                                singleConsultationUiState !is SingleConsultationUiState.Loading &&
+                                imageUploadState !is ImageUploadState.Loading)
                     ) {
                         if (consultationCreationState is ConsultationCreationState.Loading ||
                             updateConsultationState is UpdateConsultationUiState.Loading ||
-                            singleConsultationUiState is SingleConsultationUiState.Loading) {
+                            singleConsultationUiState is SingleConsultationUiState.Loading ||
+                            imageUploadState is ImageUploadState.Loading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         } else {
                             Text(if (isEditing) "Atualizar" else "Salvar")
@@ -381,22 +432,19 @@ fun ConsultationScreen(
         }
     }
 
-    // A função CameraCapture é invocada como um Composable separado
     if (showCamera) {
         CameraCapture(
             onImageCaptured = { bitmap ->
-                showCamera = false // Esconde a câmera após a captura
-                capturedImageBitmap = bitmap // Armazena o bitmap capturado
+                showCamera = false
+                capturedImageBitmap = bitmap
 
                 if (bitmap != null) {
-                    // --- CHAMA A FUNÇÃO PARA SALVAR NA GALERIA AQUI ---
                     val savedUri = FileUtils.saveBitmapToGallery(context, bitmap)
                     if (savedUri != null) {
                         Toast.makeText(context, "Imagem salva na galeria!", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, "Falha ao salvar imagem na galeria.", Toast.LENGTH_SHORT).show()
                     }
-                    // --------------------------------------------------
                 } else {
                     Toast.makeText(context, "Captura de imagem cancelada ou falhou.", Toast.LENGTH_SHORT).show()
                 }
@@ -406,7 +454,6 @@ fun ConsultationScreen(
 }
 
 
-// Sua função calculateAge2 (sem alterações)
 fun calculateAge2(dobString: String, dateFormat: SimpleDateFormat): String? {
     return try {
         val dob = dateFormat.parse(dobString) ?: return null
@@ -422,3 +469,4 @@ fun calculateAge2(dobString: String, dateFormat: SimpleDateFormat): String? {
         null
     }
 }
+
