@@ -17,10 +17,12 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.net.URL
+import java.text.DecimalFormat // NOVO: Para formatar a confiança
+import java.text.DecimalFormatSymbols // NOVO: Para formatar a confiança
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import android.util.Log // Adicione para logs de depuração
+import android.util.Log
 
 object PdfGenerator {
     private fun drawTextWithLineBreaks(canvas: Canvas, paint: Paint, text: String, x: Float, y: Float, maxWidth: Float): Float {
@@ -130,7 +132,6 @@ object PdfGenerator {
             sortedAppointments.forEachIndexed { index, appointment ->
                 val estimatedAppointmentContentHeight = 250f // Estimativa de altura para texto e uma imagem. Ajuste se necessário.
 
-                // Verifica se precisa de nova página antes de desenhar os dados da consulta
                 if (yPosition + estimatedAppointmentContentHeight > pageInfo.pageHeight - margin) {
                     pdfDocument.finishPage(page)
                     page = pdfDocument.startPage(pageInfo)
@@ -152,12 +153,13 @@ object PdfGenerator {
                 paint.textSize = 14f
                 paint.isFakeBoldText = false
 
-                // NOVO: Desenha as imagens (se houver)
                 appointment.fileImageUrls?.let { imageUrls ->
                     if (imageUrls.isNotEmpty()) {
                         imageUrls.forEachIndexed { imgIndex, imageUrl ->
                             try {
-                                if (yPosition + 250 > pageInfo.pageHeight - margin) { // Altura estimada para imagem + label
+                                val estimatedImageDrawHeight = 150f // Ex: 150f pixels de altura para a imagem + label
+
+                                if (yPosition + estimatedImageDrawHeight > pageInfo.pageHeight - margin) {
                                     pdfDocument.finishPage(page)
                                     page = pdfDocument.startPage(pageInfo)
                                     canvas = page.canvas
@@ -174,15 +176,17 @@ object PdfGenerator {
                                 yPosition += 25f
                                 paint.isFakeBoldText = false
 
-                                val bitmap = downloadImage(imageUrl) // Chama a função para baixar a imagem
+                                val bitmap = downloadImage(imageUrl)
                                 if (bitmap != null) {
                                     val aspectRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
-                                    val maxImageWidth = contentWidth * 0.9f // Ajuste a largura máxima da imagem no PDF
+                                    val desiredImageScaleFactor = 0.5f
+                                    val maxImageWidth = contentWidth * desiredImageScaleFactor
+
                                     var imageHeight = maxImageWidth / aspectRatio
                                     var imageWidth = maxImageWidth
 
-                                    val maxAllowedHeight = pageInfo.pageHeight - yPosition - margin - 20f // Espaço restante na página
-                                    if (imageHeight > maxAllowedHeight) { // Se a imagem for muito alta
+                                    val maxAllowedHeight = pageInfo.pageHeight - yPosition - margin - 20f
+                                    if (imageHeight > maxAllowedHeight) {
                                         imageHeight = maxAllowedHeight
                                         imageWidth = imageHeight * aspectRatio
                                     }
@@ -190,7 +194,7 @@ object PdfGenerator {
                                     val imageRect = RectF(margin, yPosition, margin + imageWidth, yPosition + imageHeight)
                                     canvas.drawBitmap(bitmap, null, imageRect, null)
                                     yPosition += imageHeight + 20f
-                                    bitmap.recycle() // Libera a memória do bitmap
+                                    bitmap.recycle()
                                 } else {
                                     paint.color = Color.RED
                                     canvas.drawText("Erro ao carregar imagem da URL: $imageUrl", margin, yPosition, paint)
@@ -207,6 +211,26 @@ object PdfGenerator {
                         }
                     }
                 }
+
+                appointment.predictionText?.let { prediction ->
+                    appointment.predictionConfidence?.let { confidence ->
+                        // Formata a confiança como porcentagem
+                        val symbols = DecimalFormatSymbols(Locale.getDefault())
+                        symbols.groupingSeparator = '.'
+                        symbols.decimalSeparator = ','
+                        val df = DecimalFormat("#,##0.00", symbols)
+                        val formattedConfidence = df.format(confidence * 100)
+
+                        paint.isFakeBoldText = true
+                        canvas.drawText("Predição IA:", margin, yPosition, paint)
+                        yPosition += paint.fontSpacing
+                        paint.isFakeBoldText = false
+                        val predictionLine = "$prediction (Confiança: $formattedConfidence%)"
+                        yPosition = drawTextWithLineBreaks(canvas, paint, predictionLine, margin + 10, yPosition, contentWidth - 10)
+                        yPosition += 10f
+                    }
+                }
+
 
                 // Desenha photoLocation (se houver)
                 appointment.photoLocation?.let { photoLoc ->
@@ -229,7 +253,7 @@ object PdfGenerator {
                     yPosition += 10f
                 }
 
-                yPosition += 30f // Espaço entre as consultas
+                yPosition += 30f
             }
         }
 

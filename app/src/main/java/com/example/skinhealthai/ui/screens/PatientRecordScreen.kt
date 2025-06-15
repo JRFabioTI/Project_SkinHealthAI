@@ -97,7 +97,7 @@ fun PatientRecordScreen(
     }
 
     LaunchedEffect(deleteConsultationState) {
-        val currentDeleteConsultationState = deleteConsultationState // Para smart cast
+        val currentDeleteConsultationState = deleteConsultationState
         when (currentDeleteConsultationState) {
             is DeleteConsultationUiState.Success -> {
                 Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
@@ -139,8 +139,8 @@ fun PatientRecordScreen(
         },
 
         floatingActionButton = {
-            val currentPatientUiState = patientUiState // Para smart cast
-            val currentPatientConsultationsUiState = patientConsultationsUiState // Para smart cast
+            val currentPatientUiState = patientUiState
+            val currentPatientConsultationsUiState = patientConsultationsUiState
 
             if (currentPatientUiState is PatientDataUiState.PatientLoaded &&
                 currentPatientConsultationsUiState is PatientConsultationsUiState.Loaded) {
@@ -150,8 +150,6 @@ fun PatientRecordScreen(
                         val consultations = currentPatientConsultationsUiState.consultations
 
                         val patientPdfData = PatientRecordPdfData.fromPatientResponse(patientData)
-                        // AQUI: Você precisará adaptar AppointmentPdfData.fromConsultationResponse
-                        // para passar as URLs das imagens e os resultados da análise
                         val appointmentsPdfData = consultations.map { AppointmentPdfData.fromConsultationResponse(it) }
 
                         val medicalRecordContent = MedicalRecordPdfContent(
@@ -189,7 +187,7 @@ fun PatientRecordScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val currentPatientUiState = patientUiState // Para smart cast
+            val currentPatientUiState = patientUiState
             when (currentPatientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -239,7 +237,7 @@ fun PatientRecordScreen(
 
                     patient.date_of_birth?.let { apiDateString ->
                         val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato da API
+                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
                         val formattedDate = try {
                             apiFormat.parse(apiDateString)?.let { dateObject ->
@@ -293,7 +291,7 @@ fun PatientRecordScreen(
                             .padding(bottom = 8.dp)
                     )
 
-                    val currentPatientConsultationsUiState = patientConsultationsUiState // Para smart cast
+                    val currentPatientConsultationsUiState = patientConsultationsUiState
                     when (currentPatientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -425,7 +423,6 @@ fun PatientRecordScreen(
 
                                                             // Exibe o resultado da predição, se houver
                                                             imageWithAnalysis.analysisResult?.let { analysis ->
-                                                                // CORREÇÃO: Envolver composables em um Column ou Box
                                                                 Column(
                                                                     modifier = Modifier.fillMaxWidth(),
                                                                     horizontalAlignment = Alignment.CenterHorizontally
@@ -441,18 +438,25 @@ fun PatientRecordScreen(
                                                                         Text(
                                                                             text = "Erro na IA: $errorMsg",
                                                                             style = MaterialTheme.typography.bodySmall,
-                                                                            color = MaterialTheme.colorScheme.error // MaterialTheme.colorScheme.error é correto
+                                                                            color = MaterialTheme.colorScheme.error
                                                                         )
                                                                     }
-                                                                    Spacer(modifier = Modifier.height(8.dp)) // Espaçador após o resultado da predição
+                                                                    Spacer(modifier = Modifier.height(8.dp))
                                                                 }
                                                             }
-                                                            // Adiciona um espaçamento maior entre imagens/análises se houver mais de uma
                                                             if (imagesWithAnalysis.size > 1) {
                                                                 Spacer(modifier = Modifier.height(16.dp))
                                                             }
                                                         }
                                                     }
+                                                }
+
+                                                consultation.photoLocation?.let { photoLoc ->
+                                                    Text(
+                                                        text = "Local da Foto: $photoLoc",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
                                                 }
 
                                                 consultation.notes?.let { notes ->
@@ -462,13 +466,7 @@ fun PatientRecordScreen(
                                                         modifier = Modifier.padding(top = 4.dp)
                                                     )
                                                 }
-                                                consultation.photoLocation?.let { photoLoc ->
-                                                    Text(
-                                                        text = "Local da Foto: $photoLoc",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        modifier = Modifier.padding(top = 4.dp)
-                                                    )
-                                                }
+
                                             }
                                         }
                                     }
@@ -477,7 +475,7 @@ fun PatientRecordScreen(
                         }
                         is PatientConsultationsUiState.Error -> {
                             Text(
-                                text = (currentPatientConsultationsUiState as PatientConsultationsUiState.Error).message, // Smart cast for error
+                                text = (currentPatientConsultationsUiState as PatientConsultationsUiState.Error).message,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -490,7 +488,7 @@ fun PatientRecordScreen(
                 }
                 is PatientDataUiState.Error -> {
                     Text(
-                        text = (currentPatientUiState as PatientDataUiState.Error).message, // Smart cast for error
+                        text = (currentPatientUiState as PatientDataUiState.Error).message,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)

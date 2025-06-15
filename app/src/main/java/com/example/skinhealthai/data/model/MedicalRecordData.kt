@@ -4,7 +4,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-// PatientRecordPdfData permanece inalterado
 data class PatientRecordPdfData(
     val name: String,
     val email: String?,
@@ -69,14 +68,13 @@ data class PatientRecordPdfData(
     }
 }
 
-// AppointmentPdfData é MODIFICADO
 data class AppointmentPdfData(
     val dateConsultation: String,
     val photoLocation: String?,
     val notes: String?,
-    // O campo fileImageUrls continua sendo List<String>? no AppointmentPdfData
-    // Mas agora ele será populado de imagesWithAnalysis
-    val fileImageUrls: List<String>?
+    val fileImageUrls: List<String>?,
+    val predictionText: String?,
+    val predictionConfidence: Float?
 ) {
     companion object {
         fun fromConsultationResponse(consultation: ConsultationResponse): AppointmentPdfData {
@@ -89,14 +87,19 @@ data class AppointmentPdfData(
                 }
             } catch (e: Exception) { "Data/Hora Inválida" }
 
-            // CORREÇÃO AQUI: Acessar imagesWithAnalysis e mapear para imageUrls
             val extractedFileImageUrls = consultation.imagesWithAnalysis?.mapNotNull { it.imageUrl }
+
+            val firstImageWithAnalysis = consultation.imagesWithAnalysis?.firstOrNull { it.analysisResult != null }
+            val predictionText = firstImageWithAnalysis?.analysisResult?.result
+            val predictionConfidence = firstImageWithAnalysis?.analysisResult?.confidence
 
             return AppointmentPdfData(
                 dateConsultation = formattedConsultationDate ?: "Data/Hora Inválida",
                 photoLocation = consultation.photoLocation,
                 notes = consultation.notes,
-                fileImageUrls = extractedFileImageUrls // NOVO: Passa as URLs extraídas
+                fileImageUrls = extractedFileImageUrls,
+                predictionText = predictionText,
+                predictionConfidence = predictionConfidence
             )
         }
     }

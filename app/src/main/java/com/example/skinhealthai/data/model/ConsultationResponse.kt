@@ -31,23 +31,21 @@ data class AnalysisResultData(
     val result: String?,
     val confidence: Float?,
     @SerializedName("model_version") val modelVersion: String?,
-    // Adicione outros campos se o Django retornar, como id da imagem, user_created_by, datas
-    @SerializedName("image") val imageId: Int?, // ID da imagem associada
+    @SerializedName("image") val imageId: Int?,
     @SerializedName("user_created_by") val userCreatedBy: Int?,
     @SerializedName("date_created") val dateCreated: String?,
     @SerializedName("date_updated") val dateUpdated: String?,
     val error: String?
 )
 
-// NOVO: Classe para o objeto FileImageSkin aninhado com o resultado da análise
 data class FileImageWithAnalysisResponse(
-    val id: Int?, // ID do FileImageSkin
+    val id: Int?,
     val filename: String?,
     @SerializedName("remote_name") val remoteName: String?,
-    @SerializedName("image_url") val imageUrl: String?, // Retornado pelo FileImageSkinSerializer
-    val consultation: Int?, // ID da consulta associada
+    @SerializedName("image_url") val imageUrl: String?,
+    val consultation: Int?,
     @SerializedName("user_created_by") val userCreatedBy: Int?,
     @SerializedName("date_created") val dateCreated: String?,
     @SerializedName("date_updated") val dateUpdated: String?,
-    @SerializedName("analysis_result") val analysisResult: AnalysisResultData? // Aninha o resultado da análise
+    @SerializedName("analysis_result") val analysisResult: AnalysisResultData?
 )

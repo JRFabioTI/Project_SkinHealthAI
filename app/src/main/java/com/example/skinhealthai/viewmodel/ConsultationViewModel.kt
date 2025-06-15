@@ -52,7 +52,6 @@ sealed class SingleConsultationUiState {
 sealed class UpdateConsultationUiState {
     object Idle : UpdateConsultationUiState()
     object Loading : UpdateConsultationUiState()
-    // CORREÇÃO: Passar ConsultationResponse no sucesso da atualização
     data class Success(val consultation: ConsultationResponse) : UpdateConsultationUiState()
     data class Error(val message: String) : UpdateConsultationUiState()
 }
@@ -67,7 +66,6 @@ sealed class DeleteConsultationUiState {
 sealed class ImageUploadState {
     object Idle : ImageUploadState()
     object Loading : ImageUploadState()
-    // NOVO: Passa o objeto UploadImageResponse completo no sucesso
     data class Success(val uploadedFile: UploadImageResponse) : ImageUploadState()
     data class Error(val message: String) : ImageUploadState()
 }
@@ -126,7 +124,6 @@ class ConsultationViewModel(
             try {
                 val response = consultationRepository.createConsultation(consultationRequest)
                 if (response.isSuccessful && response.body() != null) {
-                    // CORREÇÃO: Passar o corpo da resposta para o estado Success
                     _consultationCreationState.value = ConsultationCreationState.Success(response.body()!!)
                     loadPatientConsultations(consultationRequest.patientId)
                 } else {
@@ -165,16 +162,15 @@ class ConsultationViewModel(
                 if (response.isSuccessful && response.body() != null) {
                     val consultation = response.body()!!
                     _singleConsultationUiState.value = SingleConsultationUiState.Loaded(consultation)
-                    // NOVO: existingImageUrls agora é populado com imagesWithAnalysis
                     _existingImageUrls.value = consultation.imagesWithAnalysis ?: emptyList()
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao carregar consulta para edição."
                     _singleConsultationUiState.value = SingleConsultationUiState.Error(message)
-                    _existingImageUrls.value = emptyList() // Limpa em caso de erro
+                    _existingImageUrls.value = emptyList()
                 }
             } catch (e: Exception) {
                 _singleConsultationUiState.value = SingleConsultationUiState.Error(e.message ?: "Falha na conexão ou erro desconhecido ao carregar consulta.")
-                _existingImageUrls.value = emptyList() // Limpa em caso de erro
+                _existingImageUrls.value = emptyList()
             }
         }
     }
@@ -244,7 +240,6 @@ class ConsultationViewModel(
 
                 if (response.isSuccessful && response.body() != null) {
                     val uploadResponse = response.body()!!
-                    // NOVO: Passa o UploadImageResponse completo para o estado de sucesso
                     _imageUploadState.value = ImageUploadState.Success(uploadedFile = uploadResponse)
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Erro desconhecido"
