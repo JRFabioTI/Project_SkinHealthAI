@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.skinhealthai.data.model.ConsultationResponse
 import com.example.skinhealthai.data.model.ConsultationRequest
+import com.example.skinhealthai.data.model.FileImageWithAnalysisResponse
 import com.example.skinhealthai.data.model.PatientResponse
+import com.example.skinhealthai.data.model.UploadImageResponse
 import com.example.skinhealthai.repository.PatientRepository
 import com.example.skinhealthai.repository.ConsultationRepository
 import com.example.skinhealthai.repository.FileImageRepository
@@ -65,7 +67,8 @@ sealed class DeleteConsultationUiState {
 sealed class ImageUploadState {
     object Idle : ImageUploadState()
     object Loading : ImageUploadState()
-    data class Success(val message: String, val consultationId: String) : ImageUploadState()
+    // NOVO: Passa o objeto UploadImageResponse completo no sucesso
+    data class Success(val uploadedFile: UploadImageResponse) : ImageUploadState()
     data class Error(val message: String) : ImageUploadState()
 }
 
@@ -96,8 +99,9 @@ class ConsultationViewModel(
     private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
     val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState.asStateFlow()
 
-    private val _existingImageUrls = MutableStateFlow<List<String>>(emptyList())
-    val existingImageUrls: StateFlow<List<String>> = _existingImageUrls.asStateFlow()
+    private val _existingImageUrls = MutableStateFlow<List<FileImageWithAnalysisResponse>>(emptyList())
+    val existingImageUrls: StateFlow<List<FileImageWithAnalysisResponse>> = _existingImageUrls.asStateFlow()
+
 
     fun loadPatient(patientId: Int) {
         viewModelScope.launch {
@@ -161,15 +165,16 @@ class ConsultationViewModel(
                 if (response.isSuccessful && response.body() != null) {
                     val consultation = response.body()!!
                     _singleConsultationUiState.value = SingleConsultationUiState.Loaded(consultation)
-                    _existingImageUrls.value = consultation.fileImageUrls ?: emptyList()
+                    // NOVO: existingImageUrls agora é populado com imagesWithAnalysis
+                    _existingImageUrls.value = consultation.imagesWithAnalysis ?: emptyList()
                 } else {
                     val message = response.errorBody()?.string() ?: "Erro ao carregar consulta para edição."
                     _singleConsultationUiState.value = SingleConsultationUiState.Error(message)
-                    _existingImageUrls.value = emptyList()
+                    _existingImageUrls.value = emptyList() // Limpa em caso de erro
                 }
             } catch (e: Exception) {
                 _singleConsultationUiState.value = SingleConsultationUiState.Error(e.message ?: "Falha na conexão ou erro desconhecido ao carregar consulta.")
-                _existingImageUrls.value = emptyList()
+                _existingImageUrls.value = emptyList() // Limpa em caso de erro
             }
         }
     }
@@ -239,7 +244,8 @@ class ConsultationViewModel(
 
                 if (response.isSuccessful && response.body() != null) {
                     val uploadResponse = response.body()!!
-                    _imageUploadState.value = ImageUploadState.Success(uploadResponse.message, uploadResponse.consultationId)
+                    // NOVO: Passa o UploadImageResponse completo para o estado de sucesso
+                    _imageUploadState.value = ImageUploadState.Success(uploadedFile = uploadResponse)
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Erro desconhecido"
                     _imageUploadState.value = ImageUploadState.Error("Falha ao fazer upload da imagem: ${response.code()} - $errorBody")

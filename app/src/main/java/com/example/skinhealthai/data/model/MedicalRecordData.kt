@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+// PatientRecordPdfData permanece inalterado
 data class PatientRecordPdfData(
     val name: String,
     val email: String?,
@@ -68,10 +69,13 @@ data class PatientRecordPdfData(
     }
 }
 
+// AppointmentPdfData é MODIFICADO
 data class AppointmentPdfData(
     val dateConsultation: String,
     val photoLocation: String?,
     val notes: String?,
+    // O campo fileImageUrls continua sendo List<String>? no AppointmentPdfData
+    // Mas agora ele será populado de imagesWithAnalysis
     val fileImageUrls: List<String>?
 ) {
     companion object {
@@ -85,11 +89,14 @@ data class AppointmentPdfData(
                 }
             } catch (e: Exception) { "Data/Hora Inválida" }
 
+            // CORREÇÃO AQUI: Acessar imagesWithAnalysis e mapear para imageUrls
+            val extractedFileImageUrls = consultation.imagesWithAnalysis?.mapNotNull { it.imageUrl }
+
             return AppointmentPdfData(
                 dateConsultation = formattedConsultationDate ?: "Data/Hora Inválida",
                 photoLocation = consultation.photoLocation,
                 notes = consultation.notes,
-                fileImageUrls = consultation.fileImageUrls
+                fileImageUrls = extractedFileImageUrls // NOVO: Passa as URLs extraídas
             )
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberImagePainter
+
 import com.example.skinhealthai.data.model.ConsultationRequest
 import com.example.skinhealthai.ui.viewmodel.ImageUploadState
 import com.example.skinhealthai.ui.viewmodel.ConsultationViewModel
@@ -40,6 +41,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
 import com.example.skinhealthai.utils.FileUtils
 import com.example.skinhealthai.viewmodel.ConsultationViewModelFactory
 
@@ -73,14 +75,26 @@ fun ConsultationScreen(
     val existingImageUrls by consultationViewModel.existingImageUrls.collectAsState()
 
     var currentImageToDisplay by remember { mutableStateOf<Any?>(null) }
+    // CORREÇÃO: Adicionadas as declarações para currentPredictionText e currentPredictionConfidence
+    var currentPredictionText by remember { mutableStateOf<String?>(null) }
+    var currentPredictionConfidence by remember { mutableStateOf<Float?>(null) }
 
+
+    // --- Lógica para decidir qual imagem exibir (prioriza a recém-capturada) ---
     LaunchedEffect(existingImageUrls, capturedImageBitmap) {
         if (capturedImageBitmap != null) {
             currentImageToDisplay = capturedImageBitmap
+            currentPredictionText = null // Limpa predição antiga se nova foto for tirada
+            currentPredictionConfidence = null
         } else if (existingImageUrls.isNotEmpty()) {
-            currentImageToDisplay = existingImageUrls.first()
+            val firstExistingImage = existingImageUrls.first()
+            currentImageToDisplay = firstExistingImage.imageUrl
+            currentPredictionText = firstExistingImage.analysisResult?.result
+            currentPredictionConfidence = firstExistingImage.analysisResult?.confidence
         } else {
             currentImageToDisplay = null
+            currentPredictionText = null
+            currentPredictionConfidence = null
         }
     }
 
@@ -103,13 +117,14 @@ fun ConsultationScreen(
         if (isEditing && consultationId != null) {
             consultationViewModel.loadSingleConsultation(consultationId)
         } else {
+            // Se não está editando (é uma nova consulta), limpa estados de imagem
             consultationViewModel.resetExistingImageUrls()
-            capturedImageBitmap = null
+            capturedImageBitmap = null // Garante que não haja preview de fotos antigas
         }
     }
 
     LaunchedEffect(singleConsultationUiState) {
-        val currentSingleConsultationUiState = singleConsultationUiState
+        val currentSingleConsultationUiState = singleConsultationUiState // Variável local para smart cast
         when (currentSingleConsultationUiState) {
             is SingleConsultationUiState.Loaded -> {
                 val consultation = currentSingleConsultationUiState.consultation
@@ -179,6 +194,7 @@ fun ConsultationScreen(
         if ((consultationProcessed || updateProcessed) && capturedImageBitmap != null && consultationIdForUpload != null) {
             consultationViewModel.uploadImageForConsultation(capturedImageBitmap!!, consultationIdForUpload)
         } else if (consultationProcessed || updateProcessed) {
+            // CORREÇÃO: Sintaxe da rota de navegação
             navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
                 popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
             }
@@ -189,22 +205,51 @@ fun ConsultationScreen(
         val currentImageUploadState = imageUploadState // Variável local para smart cast
         when (currentImageUploadState) {
             is ImageUploadState.Success -> {
-                Toast.makeText(context, currentImageUploadState.message, Toast.LENGTH_SHORT).show()
+                val uploadedFile = currentImageUploadState.uploadedFile // Pega o objeto completo
+
+                // CORREÇÃO: Usar uma mensagem de sucesso genérica ou baseada na predição
+                val baseMessage = "Upload de imagem concluído!" // Mensagem genérica
+
+                val predictionMessage = uploadedFile.analysisResult?.result?.let { pred ->
+                    val conf = String.format(Locale.getDefault(), "%.2f", uploadedFile.analysisResult.confidence?.times(100) ?: 0.0)
+                    "\nPredição da IA: $pred (Confiança: $conf%)"
+                } ?: uploadedFile.analysisResult?.error?.let { errorMsg -> // Verifica se há erro da IA
+                    "\nErro da IA: $errorMsg"
+                } ?: "\nPredição da IA não disponível."
+
+
+                val finalToastMessage = "$baseMessage$predictionMessage"
+                Toast.makeText(context, finalToastMessage, Toast.LENGTH_LONG).show()
+
+
                 consultationViewModel.resetImageUploadState()
-                capturedImageBitmap = null // IMPORTANTE: Limpa o bitmap capturado após upload bem-sucedido
-                navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
-                    popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
-                }
+                capturedImageBitmap = null // Limpa o bitmap capturado após upload bem-sucedido
+
+                // NOVO: Atualiza a imagem exibida e a predição localmente após o upload
+                currentImageToDisplay = uploadedFile.imageUrl
+                currentPredictionText = uploadedFile.analysisResult?.result
+                currentPredictionConfidence = uploadedFile.analysisResult?.confidence
+
+                // Não navegue imediatamente se quiser que o usuário veja a predição na tela
+                // Se navegar, remova as três linhas acima e descomente o navigate abaixo:
+                 navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
+                     popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
+                 }
             }
             is ImageUploadState.Error -> {
                 Toast.makeText(context, currentImageUploadState.message, Toast.LENGTH_LONG).show()
                 consultationViewModel.resetImageUploadState()
-                // Em caso de erro no upload, ainda navegue de volta
+                // Se o upload falhou, pode não haver predição válida. Limpa-os.
+                currentImageToDisplay = null
+                currentPredictionText = null
+                currentPredictionConfidence = null
+
+                // CORREÇÃO: Sintaxe da rota de navegação
                 navController.navigate("${AppRoutes.PATIENT_RECORD_BASE}/${patientId}") {
                     popUpTo(AppRoutes.PATIENT_RECORD_WITH_PATIENT_ID) { inclusive = true }
                 }
             }
-            else -> { /* Idle ou Loading, não fazer nada, apenas mostrar progresso */ }
+            else -> { /* Idle ou Loading */ }
         }
     }
 
@@ -234,7 +279,7 @@ fun ConsultationScreen(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val currentPatientUiState = patientUiState
+            val currentPatientUiState = patientUiState // Variável local para smart cast
             when (currentPatientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -243,7 +288,7 @@ fun ConsultationScreen(
                 is PatientDataUiState.PatientLoaded -> {
                     val patient = currentPatientUiState.patient
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = "Paciente: ${patient.name}",
@@ -347,6 +392,7 @@ fun ConsultationScreen(
                             .heightIn(min = 130.dp)
                     )
 
+                    // NOVO: Bloco de exibição da IMAGEM: prioriza a capturada, senão mostra a primeira existente
                     val imageToDisplay = capturedImageBitmap ?: existingImageUrls.firstOrNull()
 
                     imageToDisplay?.let { source ->
@@ -365,7 +411,7 @@ fun ConsultationScreen(
                                     bitmap = source.asImageBitmap(),
                                     contentDescription = "Imagem da Consulta",
                                     modifier = Modifier
-                                        .size(150.dp) // Formato solicitado
+                                        .size(150.dp)
                                         .clip(MaterialTheme.shapes.medium)
                                         .align(Alignment.CenterHorizontally),
                                     contentScale = ContentScale.Crop
@@ -376,16 +422,27 @@ fun ConsultationScreen(
                                     painter = rememberImagePainter(data = source),
                                     contentDescription = "Imagem da Consulta",
                                     modifier = Modifier
-                                        .size(150.dp) // Formato solicitado
+                                        .size(150.dp)
                                         .clip(MaterialTheme.shapes.medium)
                                         .align(Alignment.CenterHorizontally),
                                     contentScale = ContentScale.Crop
                                 )
                             }
-                            else -> {
-                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // NOVO: Exibir resultado da predição abaixo da imagem
+                        // CORREÇÃO: Usar as variáveis de estado currentPredictionText e currentPredictionConfidence
+                        currentPredictionText?.let { pred ->
+                            val conf = String.format(Locale.getDefault(), "%.2f", currentPredictionConfidence?.times(100) ?: 0.0)
+                            Text(
+                                text = "Predição: $pred (Confiança: $conf%)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
 
 

@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
+
 import coil.compose.rememberImagePainter
 import com.example.skinhealthai.data.model.AppointmentPdfData
 import com.example.skinhealthai.data.model.ConsultationResponse
@@ -39,11 +41,20 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
+// --- IMPORTS DO SEU APP ---
 import com.example.skinhealthai.viewmodel.ConsultationViewModelFactory
 import com.example.skinhealthai.data.network.RetrofitInstance
 import com.example.skinhealthai.repository.PatientRepository
 import com.example.skinhealthai.repository.ConsultationRepository
 import com.example.skinhealthai.repository.FileImageRepository
+// NOVO: Imports para os modelos de dados da imagem e análise
+import com.example.skinhealthai.data.model.FileImageWithAnalysisResponse
+import com.example.skinhealthai.data.model.AnalysisResultData
+// NOVO: Import para o modificador clip
+import androidx.compose.ui.draw.clip
+// Para MaterialTheme.shapes (normalmente já vem, mas bom verificar)
+import androidx.compose.material3.MaterialTheme
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +97,7 @@ fun PatientRecordScreen(
     }
 
     LaunchedEffect(deleteConsultationState) {
-        val currentDeleteConsultationState = deleteConsultationState
+        val currentDeleteConsultationState = deleteConsultationState // Para smart cast
         when (currentDeleteConsultationState) {
             is DeleteConsultationUiState.Success -> {
                 Toast.makeText(context, "Consulta excluída com sucesso!", Toast.LENGTH_SHORT).show()
@@ -128,8 +139,8 @@ fun PatientRecordScreen(
         },
 
         floatingActionButton = {
-            val currentPatientUiState = patientUiState
-            val currentPatientConsultationsUiState = patientConsultationsUiState
+            val currentPatientUiState = patientUiState // Para smart cast
+            val currentPatientConsultationsUiState = patientConsultationsUiState // Para smart cast
 
             if (currentPatientUiState is PatientDataUiState.PatientLoaded &&
                 currentPatientConsultationsUiState is PatientConsultationsUiState.Loaded) {
@@ -139,6 +150,8 @@ fun PatientRecordScreen(
                         val consultations = currentPatientConsultationsUiState.consultations
 
                         val patientPdfData = PatientRecordPdfData.fromPatientResponse(patientData)
+                        // AQUI: Você precisará adaptar AppointmentPdfData.fromConsultationResponse
+                        // para passar as URLs das imagens e os resultados da análise
                         val appointmentsPdfData = consultations.map { AppointmentPdfData.fromConsultationResponse(it) }
 
                         val medicalRecordContent = MedicalRecordPdfContent(
@@ -176,7 +189,7 @@ fun PatientRecordScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val currentPatientUiState = patientUiState
+            val currentPatientUiState = patientUiState // Para smart cast
             when (currentPatientUiState) {
                 is PatientDataUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -226,7 +239,7 @@ fun PatientRecordScreen(
 
                     patient.date_of_birth?.let { apiDateString ->
                         val displayFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        val apiFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) // Formato da API
 
                         val formattedDate = try {
                             apiFormat.parse(apiDateString)?.let { dateObject ->
@@ -280,7 +293,7 @@ fun PatientRecordScreen(
                             .padding(bottom = 8.dp)
                     )
 
-                    val currentPatientConsultationsUiState = patientConsultationsUiState
+                    val currentPatientConsultationsUiState = patientConsultationsUiState // Para smart cast
                     when (currentPatientConsultationsUiState) {
                         is PatientConsultationsUiState.Loading -> {
                             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -366,7 +379,6 @@ fun PatientRecordScreen(
                                                             onClick = {
                                                                 consultation.id?.let { consId ->
                                                                     patientId?.let { pId ->
-                                                                        // CORREÇÃO: Sintaxe da rota de navegação
                                                                         navController.navigate("${AppRoutes.CONSULTATION_SCREEN_BASE}/${pId}?consultationId=${consId}")
                                                                     } ?: Toast.makeText(context, "Erro: ID do paciente não disponível para edição.", Toast.LENGTH_SHORT).show()
                                                                 } ?: Toast.makeText(context, "Erro: ID da consulta não disponível para edição.", Toast.LENGTH_SHORT).show()
@@ -385,38 +397,64 @@ fun PatientRecordScreen(
                                                     }
                                                 }
 
-                                                consultation.fileImageUrls?.let { urls ->
-                                                    if (urls.isNotEmpty()) {
+                                                // NOVO: Exibir imagens com análise (formato solicitado)
+                                                consultation.imagesWithAnalysis?.let { imagesWithAnalysis ->
+                                                    if (imagesWithAnalysis.isNotEmpty()) {
                                                         Spacer(modifier = Modifier.height(8.dp))
                                                         Text(
                                                             text = "Imagens da Consulta:",
                                                             style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = FontWeight.SemiBold
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            modifier = Modifier.align(Alignment.CenterHorizontally)
                                                         )
-                                                        Spacer(modifier = Modifier.height(4.dp))
-                                                        // Itera sobre cada URL e exibe a imagem
-                                                        urls.forEach { imageUrl ->
-                                                            Image(
-                                                                painter = rememberImagePainter(data = imageUrl), // Agora usa a URL correta do MinIO
-                                                                contentDescription = "Imagem da Consulta",
-                                                                modifier = Modifier
-                                                                    .fillMaxWidth()
-                                                                    .height(200.dp), // Altura fixa para visualização
-                                                                contentScale = ContentScale.Crop
-                                                            )
-                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                        Spacer(modifier = Modifier.height(8.dp))
+                                                        imagesWithAnalysis.forEach { imageWithAnalysis ->
+                                                            // Exibe a imagem
+                                                            imageWithAnalysis.imageUrl?.let { imageUrl ->
+                                                                Image(
+                                                                    painter = rememberImagePainter(data = imageUrl),
+                                                                    contentDescription = "Imagem da Consulta",
+                                                                    modifier = Modifier
+                                                                        .size(150.dp)
+                                                                        .clip(MaterialTheme.shapes.medium)
+                                                                        .align(Alignment.CenterHorizontally),
+                                                                    contentScale = ContentScale.Crop
+                                                                )
+                                                                Spacer(modifier = Modifier.height(8.dp))
+                                                            }
+
+                                                            // Exibe o resultado da predição, se houver
+                                                            imageWithAnalysis.analysisResult?.let { analysis ->
+                                                                // CORREÇÃO: Envolver composables em um Column ou Box
+                                                                Column(
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    horizontalAlignment = Alignment.CenterHorizontally
+                                                                ) {
+                                                                    analysis.result?.let { pred ->
+                                                                        val conf = String.format(Locale.getDefault(), "%.2f", analysis.confidence?.times(100) ?: 0.0)
+                                                                        Text(
+                                                                            text = "Predição IA: $pred (Confiança: $conf%)",
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                            color = MaterialTheme.colorScheme.secondary
+                                                                        )
+                                                                    } ?: analysis.error?.let { errorMsg ->
+                                                                        Text(
+                                                                            text = "Erro na IA: $errorMsg",
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                            color = MaterialTheme.colorScheme.error // MaterialTheme.colorScheme.error é correto
+                                                                        )
+                                                                    }
+                                                                    Spacer(modifier = Modifier.height(8.dp)) // Espaçador após o resultado da predição
+                                                                }
+                                                            }
+                                                            // Adiciona um espaçamento maior entre imagens/análises se houver mais de uma
+                                                            if (imagesWithAnalysis.size > 1) {
+                                                                Spacer(modifier = Modifier.height(16.dp))
+                                                            }
                                                         }
                                                     }
                                                 }
 
-                                                // Exibir photoLocation e notes textuais
-                                                consultation.photoLocation?.let { photoLoc ->
-                                                    Text(
-                                                        text = "Local da Foto: $photoLoc",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        modifier = Modifier.padding(top = 4.dp)
-                                                    )
-                                                }
                                                 consultation.notes?.let { notes ->
                                                     Text(
                                                         text = "Notas: $notes",
@@ -424,7 +462,13 @@ fun PatientRecordScreen(
                                                         modifier = Modifier.padding(top = 4.dp)
                                                     )
                                                 }
-
+                                                consultation.photoLocation?.let { photoLoc ->
+                                                    Text(
+                                                        text = "Local da Foto: $photoLoc",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -433,7 +477,7 @@ fun PatientRecordScreen(
                         }
                         is PatientConsultationsUiState.Error -> {
                             Text(
-                                text = (currentPatientConsultationsUiState as PatientConsultationsUiState.Error).message,
+                                text = (currentPatientConsultationsUiState as PatientConsultationsUiState.Error).message, // Smart cast for error
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -446,7 +490,7 @@ fun PatientRecordScreen(
                 }
                 is PatientDataUiState.Error -> {
                     Text(
-                        text = (currentPatientUiState as PatientDataUiState.Error).message,
+                        text = (currentPatientUiState as PatientDataUiState.Error).message, // Smart cast for error
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
